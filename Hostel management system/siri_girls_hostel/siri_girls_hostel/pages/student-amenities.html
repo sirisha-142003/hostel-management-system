@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Amenities – Siri Girls Hostel</title><link rel="stylesheet" href="../css/style.css"/>
+<style>
+.amenity-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius-lg); padding:26px 22px; transition:var(--transition); position:relative; overflow:hidden; }
+.amenity-card::before { content:''; position:absolute; top:-20px; right:-20px; width:80px; height:80px; border-radius:50%; background:radial-gradient(circle, rgba(196,112,122,0.06), transparent 70%); transition:var(--transition); }
+.amenity-card:hover { border-color:var(--rose-light); box-shadow:var(--shadow-md); transform:translateY(-3px); }
+.amenity-card:hover::before { transform:scale(3); }
+.am-emoji { font-size:34px; margin-bottom:14px; }
+.am-name { font-size:15px; font-weight:600; color:var(--ink); margin-bottom:6px; }
+.am-desc { font-size:13px; color:var(--muted); line-height:1.65; }
+.am-timing { font-size:11px; color:var(--rose); font-weight:500; margin-top:8px; font-family:'DM Mono',monospace; }
+</style></head>
+<body><div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script><script src="../js/sidebar.js"></script>
+<script>
+requireAuth('student');
+
+const AMENITIES = [
+  { emoji:'🏠', name:'Furnished Rooms', desc:'Single, double, and triple rooms with bed, mattress, wardrobe, study desk, chair, and fan/AC.', timing:'Available 24/7' },
+  { emoji:'🍽️', name:'Mess & Cafeteria', desc:'Fresh home-cooked meals three times daily. Vegetarian & special diet options available on request.', timing:'7–9 AM · 12:30–2:30 PM · 7:30–9:30 PM' },
+  { emoji:'📶', name:'High-Speed Wi-Fi', desc:'100 Mbps fiber internet on all floors. Dedicated study zone with 200 Mbps line. Uninterrupted 24/7.', timing:'24/7 Unlimited' },
+  { emoji:'🔒', name:'24/7 Security', desc:'Biometric entry, CCTV on all floors & corridors, trained female security staff round the clock.', timing:'24/7 Surveillance' },
+  { emoji:'🚿', name:'Hot Water Supply', desc:'Solar + electric geyser on each floor. 24-hour hot water available in all attached and common bathrooms.', timing:'24/7 Hot Water' },
+  { emoji:'🧺', name:'Laundry Room', desc:'Washing machines and dryers on every floor. Self-service (free). Express paid laundry also available.', timing:'6 AM – 10 PM' },
+  { emoji:'📚', name:'Study Room (AC)', desc:'Dedicated air-conditioned study room with good lighting and a silent zone policy. Perfect for exam prep.', timing:'Open 24/7' },
+  { emoji:'⚡', name:'Full Power Backup', desc:'100% DG backup for rooms and all common areas. No power cuts regardless of grid outages.', timing:'Instant Backup' },
+  { emoji:'💊', name:'Medical Support', desc:'First-aid kits on each floor. Resident doctor visits every Tuesday and Friday. Tie-up with nearby hospital.', timing:'Doctor: Tue & Fri' },
+  { emoji:'🚌', name:'Transport Service', desc:'Morning shuttle to colleges at 7 AM and 8 AM. Evening pickup from metro station at 6 PM.', timing:'7 AM, 8 AM, 6 PM' },
+  { emoji:'🎮', name:'Recreation Room', desc:'TV lounge, carrom, chess, table tennis. Monthly movie nights, cultural events, and birthday celebrations.', timing:'3 PM – 10 PM' },
+  { emoji:'🌿', name:'Terrace Garden', desc:'Open-air rooftop terrace with plants and seating. Great for relaxing, evening walks, and stargazing.', timing:'6 AM – 9 PM' },
+  { emoji:'🧹', name:'Housekeeping', desc:'Daily room sweeping and common area cleaning. Deep cleaning every Sunday. Pest control monthly.', timing:'8–10 AM daily' },
+  { emoji:'🍱', name:'Tiffin Service', desc:'Optional packed tiffin for college days. Pre-order before 7 AM. Available for lunch and dinner.', timing:'Pre-order by 7 AM' },
+  { emoji:'🔧', name:'Maintenance Team', desc:'On-site maintenance staff for electrical, plumbing, furniture, and general repairs. Raise a complaint anytime.', timing:'9 AM – 6 PM (urgent: 24/7)' },
+  { emoji:'📦', name:'Parcel Locker', desc:'Secure parcel receiving locker at reception. Your deliveries are kept safe until you pick them up.', timing:'Available 24/7' },
+];
+
+document.getElementById('appRoot').innerHTML = `
+  ${buildStudentSidebar('amenities')}
+  <div class="main-area">
+    <div class="topbar">
+      <div><div class="topbar-title">Amenities</div><div class="topbar-sub">Everything included in your stay</div></div>
+    </div>
+    <div class="content">
+      <div class="alert alert-info mb-24">✨ All amenities listed below are included in your stay. For any issues with a facility, please file a complaint through the portal.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px">
+        ${AMENITIES.map(a=>`
+        <div class="amenity-card">
+          <div class="am-emoji">${a.emoji}</div>
+          <div class="am-name">${a.name}</div>
+          <div class="am-desc">${a.desc}</div>
+          <div class="am-timing">⏰ ${a.timing}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+</script></body></html>

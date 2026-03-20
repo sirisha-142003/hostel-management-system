@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Visitor Pass – Siri Girls Hostel</title><link rel="stylesheet" href="../css/style.css"/></head>
+<body><div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script><script src="../js/sidebar.js"></script>
+<script>
+const sess = requireAuth('student');
+if (sess) {
+  const student = getStudents().find(s=>s.id===sess.id);
+  if(!student){ clearSession(); window.location.href='../index.html'; }
+
+  document.getElementById('appRoot').innerHTML = `
+    ${buildStudentSidebar('visitors')}
+    <div class="main-area">
+      <div class="topbar">
+        <div><div class="topbar-title">Visitor Pass</div><div class="topbar-sub">Request entry passes for your visitors</div></div>
+        <div class="topbar-right"><button class="btn btn-primary" onclick="openRequest()">+ Request Pass</button></div>
+      </div>
+      <div class="content">
+        <div class="alert alert-info mb-24">
+          ℹ️ <strong>Visitor Rules:</strong> Visitors allowed Mon–Sat, 9:00 AM – 8:00 PM only. Maximum 2 visitors at a time. Valid ID proof required at the security gate. No male visitors beyond the reception area.
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">My Visitor Requests</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Visitor</th><th>Relation</th><th>Purpose</th><th>Date</th><th>In</th><th>Out</th><th>Status</th></tr></thead>
+              <tbody id="visitorTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  renderVisitors();
+
+  function renderVisitors(){
+    const visitors = getVisitors().filter(v=>v.studentId===sess.id);
+    const tbody = document.getElementById('visitorTable');
+    if(!visitors.length){
+      tbody.innerHTML=`<tr><td colspan="7" class="text-center text-muted" style="padding:40px">No visitor requests yet.</td></tr>`; return;
+    }
+    tbody.innerHTML = visitors.map(v=>`<tr>
+      <td><strong>${v.visitorName}</strong><br><span class="mono" style="font-size:11px;color:var(--muted)">${v.phone}</span></td>
+      <td>${v.relation}</td>
+      <td>${v.purpose}</td>
+      <td style="font-size:12px">${fmtDate(v.date)}</td>
+      <td class="mono">${v.inTime||'—'}</td>
+      <td class="mono">${v.outTime||'—'}</td>
+      <td><span class="badge ${statusColor(v.status)}">${v.status}</span></td>
+    </tr>`).join('');
+  }
+
+  function openRequest(){
+    openModal(`<button class="modal-close-btn" onclick="closeModal()">✕</button>
+      <div class="modal-title">Request Visitor Pass</div>
+      <div class="modal-sub">Submit visitor details for admin approval</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Visitor Name *</label><input class="form-control" id="vr_name" placeholder="Full Name"/></div>
+        <div class="form-group"><label class="form-label">Phone *</label><input class="form-control" id="vr_phone" placeholder="Phone Number"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Relation *</label>
+          <select class="form-control" id="vr_rel"><option>Parent</option><option>Sibling</option><option>Friend</option><option>Relative</option><option>Other</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Visit Date *</label><input class="form-control" type="date" id="vr_date" value="${today()}"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Expected Arrival</label><input class="form-control" type="time" id="vr_time"/></div>
+        <div class="form-group"><label class="form-label">ID Proof Type</label>
+          <select class="form-control" id="vr_id"><option>Aadhar Card</option><option>Voter ID</option><option>Passport</option><option>PAN Card</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Purpose of Visit</label>
+        <input class="form-control" id="vr_purpose" placeholder="e.g. Parent visit for document collection"/>
+      </div>
+      <div id="vr_err" class="form-error hidden mb-8"></div>
+      <button class="btn btn-primary btn-full" onclick="submitRequest()">Submit Request</button>`);
+  }
+
+  function submitRequest(){
+    const name = document.getElementById('vr_name').value.trim();
+    const phone= document.getElementById('vr_phone').value.trim();
+    const date = document.getElementById('vr_date').value;
+    if(!name||!phone||!date){ document.getElementById('vr_err').textContent='Name, phone, and date are required.'; document.getElementById('vr_err').classList.remove('hidden'); return; }
+    const visitors = getVisitors();
+    visitors.push({
+      id: generateId('V', visitors),
+      studentId: sess.id, studentName: student.name, room: student.room,
+      visitorName: name, phone,
+      relation: document.getElementById('vr_rel').value,
+      purpose: document.getElementById('vr_purpose').value.trim()||'Visit',
+      date, inTime: document.getElementById('vr_time').value||'',
+      outTime: '', status: 'Pending'
+    });
+    setData('sgh_visitors', visitors);
+    closeModal(); showToast('✅','Visitor pass requested! Admin will approve soon.','success'); renderVisitors();
+  }
+}
+</script></body></html>

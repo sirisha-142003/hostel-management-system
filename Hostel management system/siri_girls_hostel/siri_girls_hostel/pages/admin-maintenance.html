@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Maintenance – Siri Girls Hostel</title><link rel="stylesheet" href="../css/style.css"/></head>
+<body><div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script><script src="../js/sidebar.js"></script>
+<script>
+requireAuth('admin');
+document.getElementById('appRoot').innerHTML = buildAdminSidebar('maintenance') + `
+<div class="main-area">
+  <div class="topbar"><div><div class="topbar-title">Maintenance</div><div class="topbar-sub">Track and manage hostel maintenance tasks</div></div>
+  <div class="topbar-right"><button class="btn btn-primary" onclick="openAddTask()">+ Add Task</button></div></div>
+  <div class="content">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Maintenance Tasks</span></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>ID</th><th>Room</th><th>Task</th><th>Assignee</th><th>Priority</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody id="maintTable"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>`;
+updateComplaintBadge(); renderMaint();
+
+function renderMaint(){
+  const tasks = getMaintenance();
+  document.getElementById('maintTable').innerHTML = tasks.map(t=>`
+    <tr>
+      <td class="mono" style="font-size:12px">${t.id}</td>
+      <td class="mono">${t.room}</td>
+      <td>${t.task}</td>
+      <td>${t.assignee}</td>
+      <td><span class="badge ${priorityColor(t.priority)}">${t.priority}</span></td>
+      <td>
+        <select class="form-control" style="width:130px;font-size:12px;padding:5px 10px" onchange="updateTask('${t.id}',this.value)">
+          <option ${t.status==='Open'?'selected':''}>Open</option>
+          <option ${t.status==='Pending'?'selected':''}>Pending</option>
+          <option ${t.status==='In Progress'?'selected':''}>In Progress</option>
+          <option ${t.status==='Completed'?'selected':''}>Completed</option>
+        </select>
+      </td>
+      <td style="font-size:12px;color:var(--muted)">${fmtDate(t.date)}</td>
+      <td><button class="btn btn-ghost btn-sm text-red" onclick="deleteTask('${t.id}')">🗑</button></td>
+    </tr>`).join('');
+}
+
+function updateTask(id, status){
+  const m = getMaintenance(); const i = m.findIndex(t=>t.id===id);
+  if(i>-1){ m[i].status=status; setData('sgh_maintenance',m); showToast('✅','Task updated!','success'); renderMaint(); }
+}
+
+function openAddTask(){
+  openModal(`<button class="modal-close-btn" onclick="closeModal()">✕</button>
+    <div class="modal-title">Add Maintenance Task</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Room *</label>
+        <select class="form-control" id="mt_room">${getRooms().map(r=>`<option>${r.num}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">Priority</label>
+        <select class="form-control" id="mt_priority"><option>High</option><option>Medium</option><option>Low</option></select></div>
+    </div>
+    <div class="form-group"><label class="form-label">Task Description *</label><input class="form-control" id="mt_task" placeholder="Describe the issue"/></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Assignee</label><input class="form-control" id="mt_assignee" placeholder="Vendor / Staff name"/></div>
+      <div class="form-group"><label class="form-label">Note</label><input class="form-control" id="mt_note" placeholder="Optional note"/></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveTask()">Add Task</button>`);
+}
+
+function saveTask(){
+  const task = document.getElementById('mt_task').value.trim();
+  if(!task){ showToast('⚠️','Task description required','error'); return; }
+  const m = getMaintenance();
+  m.push({ id:generateId('MT',m), room:document.getElementById('mt_room').value, task, assignee:document.getElementById('mt_assignee').value.trim()||'Unassigned', priority:document.getElementById('mt_priority').value, status:'Open', date:today(), note:document.getElementById('mt_note').value.trim() });
+  setData('sgh_maintenance',m); closeModal(); showToast('✅','Task added!','success'); renderMaint();
+}
+
+function deleteTask(id){
+  if(!confirm('Delete this task?')) return;
+  setData('sgh_maintenance', getMaintenance().filter(t=>t.id!==id));
+  showToast('🗑','Task deleted','info'); renderMaint();
+}
+</script></body></html>

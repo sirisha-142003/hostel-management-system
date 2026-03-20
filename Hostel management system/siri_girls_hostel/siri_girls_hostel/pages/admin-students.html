@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Students – Siri Girls Hostel</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+<div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script>
+<script src="../js/sidebar.js"></script>
+<script>
+const sess = requireAuth('admin');
+if (sess) renderPage();
+
+function renderPage() {
+  document.getElementById('appRoot').innerHTML = `
+    ${buildAdminSidebar('students')}
+    <div class="main-area">
+      <div class="topbar">
+        <div><div class="topbar-title">Student Management</div><div class="topbar-sub">All registered residents</div></div>
+        <div class="topbar-right">
+          <button class="btn btn-primary" onclick="openAddStudent()">+ Add Student</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="toolbar">
+          <div class="search-input-wrap"><span>🔍</span><input type="text" id="searchInput" placeholder="Search by name, ID, room..." oninput="filterTable()"/></div>
+          <select class="form-control" id="feeFilter" style="width:160px" onchange="filterTable()">
+            <option value="">All Fee Status</option>
+            <option>Paid</option><option>Pending</option><option>Overdue</option>
+          </select>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Student Records</span>
+            <span class="badge badge-rose" id="countBadge">0 students</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Student</th><th>Room</th><th>College</th><th>Phone</th><th>Joined</th><th>Fee Status</th><th>Actions</th></tr></thead>
+              <tbody id="studentTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  updateComplaintBadge();
+  renderTable();
+}
+
+function renderTable() {
+  const students = getStudents();
+  const q   = (document.getElementById('searchInput')?.value||'').toLowerCase();
+  const fee = document.getElementById('feeFilter')?.value||'';
+  const filtered = students.filter(s =>
+    (!q || s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q) || s.room.toLowerCase().includes(q)) &&
+    (!fee || s.feeStatus === fee)
+  );
+  const tbody = document.getElementById('studentTable');
+  document.getElementById('countBadge').textContent = `${filtered.length} students`;
+  if (!tbody) return;
+  if (!filtered.length) { tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted" style="padding:40px">No students found.</td></tr>`; return; }
+  tbody.innerHTML = filtered.map((s,i) => `
+    <tr>
+      <td class="mono text-muted" style="font-size:12px">${i+1}</td>
+      <td><strong>${s.name}</strong><br><span class="mono" style="font-size:11px;color:var(--muted)">${s.id}</span></td>
+      <td class="mono">${s.room}</td>
+      <td style="font-size:13px">${s.college}</td>
+      <td class="mono" style="font-size:13px">${s.phone}</td>
+      <td style="font-size:12px;color:var(--muted)">${fmtDate(s.joinDate)}</td>
+      <td><span class="badge ${feeColor(s.feeStatus)}">${s.feeStatus}</span></td>
+      <td>
+        <div class="flex gap-8">
+          <button class="btn btn-ghost btn-sm" onclick="viewStudent('${s.id}')">👁 View</button>
+          <button class="btn btn-ghost btn-sm" onclick="editStudent('${s.id}')">✏️</button>
+          <button class="btn btn-ghost btn-sm text-red" onclick="deleteStudent('${s.id}')">🗑</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function filterTable() { renderTable(); }
+
+function viewStudent(id) {
+  const s = getStudents().find(x=>x.id===id);
+  if(!s) return;
+  openModal(`
+    <button class="modal-close-btn" onclick="closeModal()">✕</button>
+    <div class="modal-title">${s.name}</div>
+    <div class="modal-sub">${s.id} · Room ${s.room}</div>
+    <div class="info-grid">
+      ${[['Student ID',s.id,'mono'],['Room',s.room,'mono'],['Room Type',s.type,''],['Floor',s.floor,''],['College',s.college,''],['Phone',s.phone,'mono'],['Email',s.email,''],['Date of Birth',fmtDate(s.dob),'mono'],['Join Date',fmtDate(s.joinDate),'mono'],['Fee Status',s.feeStatus,''],['Guardian',s.guardianName,''],['Guardian Phone',s.guardianPhone,'mono']].map(([l,v,c])=>`
+      <div class="info-item"><div class="info-label">${l}</div><div class="info-value ${c}">${s.feeStatus===v?`<span class="badge ${feeColor(v)}">${v}</span>`:v}</div></div>`).join('')}
+    </div>
+    <hr class="divider"/>
+    <div class="flex gap-12 flex-wrap">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal();editStudent('${s.id}')">✏️ Edit</button>
+      <button class="btn btn-ghost btn-sm text-red" onclick="closeModal();deleteStudent('${s.id}')">🗑 Delete</button>
+    </div>`, true);
+}
+
+function openAddStudent() {
+  const rooms = getRooms().filter(r=>r.status==='vacant');
+  openModal(`
+    <button class="modal-close-btn" onclick="closeModal()">✕</button>
+    <div class="modal-title">Add New Student</div>
+    <div class="modal-sub">Register a new resident to Siri Girls Hostel</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Full Name *</label><input class="form-control" id="f_name" placeholder="Full Name"/></div>
+      <div class="form-group"><label class="form-label">Student ID *</label><input class="form-control" id="f_id" placeholder="SGH2025001"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">College *</label><input class="form-control" id="f_college" placeholder="College Name"/></div>
+      <div class="form-group"><label class="form-label">Phone *</label><input class="form-control" id="f_phone" placeholder="9XXXXXXXXX"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="f_email" type="email" placeholder="email@college.edu"/></div>
+      <div class="form-group"><label class="form-label">Date of Birth</label><input class="form-control" id="f_dob" type="date"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Assign Room *</label>
+        <select class="form-control" id="f_room">
+          <option value="">Select vacant room</option>
+          ${rooms.map(r=>`<option value="${r.num}">${r.num} — ${r.type} · ₹${r.rent}/mo</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Room Type</label>
+        <select class="form-control" id="f_type">
+          <option>Single</option><option>Double</option><option>Triple</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Guardian Name</label><input class="form-control" id="f_gname" placeholder="Guardian Full Name"/></div>
+      <div class="form-group"><label class="form-label">Guardian Phone</label><input class="form-control" id="f_gphone" placeholder="9XXXXXXXXX"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Join Date</label><input class="form-control" id="f_join" type="date" value="${today()}"/></div>
+      <div class="form-group"><label class="form-label">Password</label><input class="form-control" id="f_pass" type="password" placeholder="Set login password"/></div>
+    </div>
+    <div id="addErr" class="form-error hidden" style="margin-bottom:10px"></div>
+    <button class="btn btn-primary btn-full" onclick="saveNewStudent()">Register Student</button>
+  `, true);
+}
+
+function saveNewStudent() {
+  const fields = ['f_name','f_id','f_college','f_phone','f_room'];
+  for (const f of fields) { if (!document.getElementById(f)?.value.trim()) { document.getElementById('addErr').textContent='Please fill all required fields.'; document.getElementById('addErr').classList.remove('hidden'); return; } }
+  const students = getStudents();
+  const newS = {
+    id: document.getElementById('f_id').value.trim(),
+    name: document.getElementById('f_name').value.trim(),
+    college: document.getElementById('f_college').value.trim(),
+    phone: document.getElementById('f_phone').value.trim(),
+    email: document.getElementById('f_email').value.trim(),
+    dob: document.getElementById('f_dob').value,
+    room: document.getElementById('f_room').value,
+    type: document.getElementById('f_type').value,
+    floor: '1st', joinDate: document.getElementById('f_join').value || today(),
+    guardianName: document.getElementById('f_gname').value.trim(),
+    guardianPhone: document.getElementById('f_gphone').value.trim(),
+    feeStatus:'Pending', password: document.getElementById('f_pass').value || 'student123'
+  };
+  students.push(newS);
+  setData('sgh_students', students);
+  // Mark room occupied
+  const rooms = getRooms();
+  const ri = rooms.findIndex(r=>r.num===newS.room);
+  if(ri>-1) { rooms[ri].status='occupied'; setData('sgh_rooms',rooms); }
+  closeModal();
+  showToast('✅', `${newS.name} registered successfully!`, 'success');
+  renderTable();
+}
+
+function editStudent(id) {
+  const students = getStudents();
+  const s = students.find(x=>x.id===id);
+  if(!s) return;
+  openModal(`
+    <button class="modal-close-btn" onclick="closeModal()">✕</button>
+    <div class="modal-title">Edit Student</div>
+    <div class="modal-sub">${s.id}</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Full Name</label><input class="form-control" id="ef_name" value="${s.name}"/></div>
+      <div class="form-group"><label class="form-label">Phone</label><input class="form-control" id="ef_phone" value="${s.phone}"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">College</label><input class="form-control" id="ef_college" value="${s.college}"/></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="ef_email" value="${s.email||''}"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Fee Status</label>
+        <select class="form-control" id="ef_fee">
+          <option ${s.feeStatus==='Paid'?'selected':''}>Paid</option>
+          <option ${s.feeStatus==='Pending'?'selected':''}>Pending</option>
+          <option ${s.feeStatus==='Overdue'?'selected':''}>Overdue</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Guardian Name</label><input class="form-control" id="ef_gname" value="${s.guardianName||''}"/></div>
+    </div>
+    <button class="btn btn-primary btn-full mt-16" onclick="saveEdit('${s.id}')">Save Changes</button>
+  `, true);
+}
+
+function saveEdit(id) {
+  const students = getStudents();
+  const i = students.findIndex(s=>s.id===id);
+  if(i<0) return;
+  students[i].name        = document.getElementById('ef_name').value.trim() || students[i].name;
+  students[i].phone       = document.getElementById('ef_phone').value.trim() || students[i].phone;
+  students[i].college     = document.getElementById('ef_college').value.trim() || students[i].college;
+  students[i].email       = document.getElementById('ef_email').value.trim();
+  students[i].feeStatus   = document.getElementById('ef_fee').value;
+  students[i].guardianName= document.getElementById('ef_gname').value.trim();
+  setData('sgh_students', students);
+  closeModal(); showToast('✅','Student updated!','success'); renderTable();
+}
+
+function deleteStudent(id) {
+  if (!confirm('Remove this student? This cannot be undone.')) return;
+  const students = getStudents().filter(s=>s.id!==id);
+  setData('sgh_students', students);
+  showToast('🗑','Student removed','info');
+  renderTable();
+}
+</script>
+</body>
+</html>

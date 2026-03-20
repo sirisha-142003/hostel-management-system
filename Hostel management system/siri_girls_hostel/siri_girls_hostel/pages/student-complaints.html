@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Complaints – Siri Girls Hostel</title><link rel="stylesheet" href="../css/style.css"/></head>
+<body><div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script><script src="../js/sidebar.js"></script>
+<script>
+const sess = requireAuth('student');
+if (sess) {
+  const student = getStudents().find(s=>s.id===sess.id);
+  if(!student){ clearSession(); window.location.href='../index.html'; }
+
+  document.getElementById('appRoot').innerHTML = `
+    ${buildStudentSidebar('complaints')}
+    <div class="main-area">
+      <div class="topbar">
+        <div><div class="topbar-title">My Complaints</div><div class="topbar-sub">File and track your hostel complaints</div></div>
+        <div class="topbar-right"><button class="btn btn-primary" onclick="openFileComplaint()">+ File Complaint</button></div>
+      </div>
+      <div class="content">
+        <div class="alert alert-info mb-16">ℹ️ Complaints are reviewed within 24 hours. You will be notified of any status updates by the admin.</div>
+        <div id="compList"></div>
+      </div>
+    </div>`;
+
+  renderComplaints();
+
+  function renderComplaints(){
+    const complaints = getComplaints().filter(c=>c.studentId===sess.id);
+    const container = document.getElementById('compList');
+    if(!complaints.length){
+      container.innerHTML=`<div style="text-align:center;padding:60px;color:var(--muted)">
+        <div style="font-size:48px;margin-bottom:16px">😊</div>
+        <div style="font-size:16px;font-weight:600">No complaints filed yet!</div>
+        <div style="font-size:13px;margin-top:6px">If you face any issue, file a complaint and we'll resolve it quickly.</div>
+        <button class="btn btn-primary mt-16" onclick="openFileComplaint()">File a Complaint</button>
+      </div>`; return;
+    }
+    container.innerHTML = complaints.map(c=>`
+      <div class="complaint-card">
+        <div class="complaint-card-header">
+          <div>
+            <div class="complaint-card-title">${c.title}</div>
+            <div class="complaint-card-meta">📌 ${c.category} · ${fmtDate(c.date)} · Room ${c.room}</div>
+          </div>
+          <div class="flex gap-8">
+            <span class="badge ${priorityColor(c.priority)}">${c.priority}</span>
+            <span class="badge ${statusColor(c.status)}">${c.status}</span>
+          </div>
+        </div>
+        <div class="complaint-card-body">${c.desc}</div>
+        ${c.status==='Resolved'?`<div class="alert alert-success" style="margin-top:8px;padding:10px 14px;font-size:13px">✅ This complaint has been resolved by the admin.</div>`:''}
+      </div>`).join('');
+  }
+
+  function openFileComplaint(){
+    openModal(`<button class="modal-close-btn" onclick="closeModal()">✕</button>
+      <div class="modal-title">File a Complaint</div>
+      <div class="modal-sub">We'll resolve it within 24 hours</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Category *</label>
+          <select class="form-control" id="fc_cat">
+            <option>Plumbing</option><option>Electrical</option><option>Internet</option>
+            <option>Furniture</option><option>Housekeeping</option><option>Security</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Priority *</label>
+          <select class="form-control" id="fc_pri">
+            <option>Low</option><option selected>Medium</option><option>High</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Title *</label>
+        <input class="form-control" id="fc_title" placeholder="Short description of the issue"/>
+      </div>
+      <div class="form-group"><label class="form-label">Detailed Description *</label>
+        <textarea class="form-control" id="fc_desc" rows="4" placeholder="Describe the issue in detail..."></textarea>
+      </div>
+      <div id="fc_err" class="form-error hidden mb-8"></div>
+      <button class="btn btn-primary btn-full" onclick="submitComplaint()">Submit Complaint</button>`);
+  }
+
+  function submitComplaint(){
+    const title = document.getElementById('fc_title').value.trim();
+    const desc  = document.getElementById('fc_desc').value.trim();
+    if(!title||!desc){ document.getElementById('fc_err').textContent='Title and description are required.'; document.getElementById('fc_err').classList.remove('hidden'); return; }
+    const complaints = getComplaints();
+    complaints.unshift({
+      id: generateId('CMP', complaints),
+      studentId: sess.id, studentName: student.name,
+      room: student.room, title,
+      category: document.getElementById('fc_cat').value,
+      priority: document.getElementById('fc_pri').value,
+      desc, date: today(), status: 'Open'
+    });
+    setData('sgh_complaints', complaints);
+    closeModal(); showToast('✅','Complaint submitted! We\'ll respond soon.','success'); renderComplaints();
+  }
+}
+</script></body></html>

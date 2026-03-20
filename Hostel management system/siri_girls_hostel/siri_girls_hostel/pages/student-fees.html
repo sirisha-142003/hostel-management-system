@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Fees – Siri Girls Hostel</title><link rel="stylesheet" href="../css/style.css"/>
+<style>
+.pay-option { border:2px solid var(--border2); border-radius:var(--radius-md); padding:14px 18px; cursor:pointer; display:flex; align-items:center; gap:14px; margin-bottom:10px; transition:var(--transition); }
+.pay-option:hover { border-color:var(--rose-light); }
+.pay-option.selected { border-color:var(--rose); background:rgba(196,112,122,0.05); }
+.pay-option input[type=radio] { accent-color:var(--rose); width:16px; height:16px; }
+</style></head>
+<body><div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script><script src="../js/sidebar.js"></script>
+<script>
+const sess = requireAuth('student');
+if (sess) {
+  const student = getStudents().find(s => s.id === sess.id);
+  if (!student) { clearSession(); window.location.href = '../index.html'; }
+  const room  = getRooms().find(r => r.num === student.room) || { rent: 6500 };
+  const rent  = room.rent || 6500;
+  const mess  = 2500, elec = 450, wifi = 500;
+  const total = rent + mess + elec + wifi;
+
+  const history = [
+    { month:'November 2024', amount: total, date:'2024-11-05', mode:'UPI', status:'Paid' },
+    { month:'October 2024',  amount: total, date:'2024-10-03', mode:'UPI', status:'Paid' },
+    { month:'September 2024',amount: total, date:'2024-09-06', mode:'Net Banking', status:'Paid' },
+    { month:'August 2024',   amount: total, date:'2024-08-04', mode:'UPI', status:'Paid' },
+  ];
+
+  document.getElementById('appRoot').innerHTML = `
+    ${buildStudentSidebar('fees')}
+    <div class="main-area">
+      <div class="topbar">
+        <div><div class="topbar-title">Fees &amp; Payment</div><div class="topbar-sub">Manage your hostel fees</div></div>
+      </div>
+      <div class="content">
+
+        <!-- Current Bill -->
+        <div class="bill-card mb-24">
+          <div class="bill-head">
+            <div>
+              <div style="font-weight:700;font-size:1rem">December 2024 — Monthly Bill</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:2px">Due: 31 December 2024</div>
+            </div>
+            <span class="badge ${feeColor(student.feeStatus)}" style="font-size:13px;padding:6px 16px">${student.feeStatus}</span>
+          </div>
+          <div class="bill-body">
+            ${[['🏠 Room Rent', `₹${rent.toLocaleString('en-IN')}`],
+               ['🍽️ Mess Charges', `₹${mess.toLocaleString('en-IN')}`],
+               ['⚡ Electricity', `₹${elec}`],
+               ['📶 Wi-Fi Charges', `₹${wifi}`],
+               ['💰 Total Payable', `₹${total.toLocaleString('en-IN')}`]
+              ].map(([l,v],i)=>`<div class="bill-row"><span>${l}</span><span class="mono">${v}</span></div>`).join('')}
+          </div>
+          ${student.feeStatus !== 'Paid' ? `
+          <div style="padding:16px 22px;border-top:1px solid var(--border)">
+            <div style="font-weight:600;margin-bottom:12px">Select Payment Method</div>
+            <label class="pay-option" onclick="selectPay(this)"><input type="radio" name="paymode" value="upi"/> <span style="font-size:22px">📱</span><div><div style="font-weight:600">UPI</div><div style="font-size:12px;color:var(--muted)">Google Pay, PhonePe, Paytm</div></div></label>
+            <label class="pay-option" onclick="selectPay(this)"><input type="radio" name="paymode" value="netbanking"/> <span style="font-size:22px">🏦</span><div><div style="font-weight:600">Net Banking</div><div style="font-size:12px;color:var(--muted)">All major banks supported</div></div></label>
+            <label class="pay-option" onclick="selectPay(this)"><input type="radio" name="paymode" value="card"/> <span style="font-size:22px">💳</span><div><div style="font-weight:600">Debit / Credit Card</div><div style="font-size:12px;color:var(--muted)">Visa, Mastercard, RuPay</div></div></label>
+            <button class="btn btn-primary mt-16" onclick="payNow()">Pay ₹${total.toLocaleString('en-IN')} Now →</button>
+          </div>` : `
+          <div style="padding:16px 22px;border-top:1px solid var(--border);display:flex;gap:12px;align-items:center">
+            <span style="color:#3d8a65;font-weight:600">✅ Fee paid for this month. Thank you!</span>
+            <button class="btn btn-ghost btn-sm" onclick="downloadReceipt()">📄 Download Receipt</button>
+          </div>`}
+        </div>
+
+        <!-- Payment History -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">Payment History</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Month</th><th>Amount</th><th>Paid On</th><th>Mode</th><th>Status</th><th>Receipt</th></tr></thead>
+              <tbody>
+                ${history.map(h=>`<tr>
+                  <td>${h.month}</td>
+                  <td class="mono text-rose fw-600">₹${h.amount.toLocaleString('en-IN')}</td>
+                  <td style="font-size:12px;color:var(--muted)">${fmtDate(h.date)}</td>
+                  <td><span class="badge badge-blue">${h.mode}</span></td>
+                  <td><span class="badge badge-green">${h.status}</span></td>
+                  <td><button class="btn btn-ghost btn-sm" onclick="downloadReceipt()">📄</button></td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>`;
+
+  function selectPay(el) { document.querySelectorAll('.pay-option').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); }
+
+  function payNow() {
+    const selected = document.querySelector('input[name=paymode]:checked');
+    if (!selected) { showToast('⚠️','Please select a payment method','error'); return; }
+    openModal(`<button class="modal-close-btn" onclick="closeModal()">✕</button>
+      <div class="modal-title">Confirm Payment</div>
+      <div class="modal-sub">You are about to pay ₹${total.toLocaleString('en-IN')} via ${selected.value.toUpperCase()}</div>
+      <div class="alert alert-info" style="margin-bottom:20px">ℹ️ This is a demo. In production, this would redirect to the payment gateway.</div>
+      <button class="btn btn-primary btn-full" onclick="confirmPay()">Confirm & Pay ₹${total.toLocaleString('en-IN')}</button>
+      <button class="btn btn-ghost btn-full mt-8" onclick="closeModal()">Cancel</button>`);
+  }
+
+  function confirmPay() {
+    const students = getStudents(); const i = students.findIndex(s=>s.id===sess.id);
+    if(i>-1){ students[i].feeStatus='Paid'; setData('sgh_students',students); }
+    closeModal(); showToast('✅','Payment successful! Receipt sent to your email.','success');
+    setTimeout(()=>window.location.reload(), 1500);
+  }
+
+  function downloadReceipt() { showToast('📄','Receipt downloaded!','info'); }
+}
+</script></body></html>

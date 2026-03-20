@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Notices – Siri Girls Hostel</title><link rel="stylesheet" href="../css/style.css"/></head>
+<body><div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script><script src="../js/sidebar.js"></script>
+<script>
+requireAuth('student');
+const notices = getNotices();
+
+document.getElementById('appRoot').innerHTML = `
+  ${buildStudentSidebar('notices')}
+  <div class="main-area">
+    <div class="topbar">
+      <div><div class="topbar-title">Notice Board</div><div class="topbar-sub">Official announcements from hostel management</div></div>
+    </div>
+    <div class="content">
+      ${notices.length ? notices.map(n=>`
+      <div class="complaint-card">
+        <div class="complaint-card-header">
+          <div>
+            <div class="complaint-card-title">📢 ${n.title}</div>
+            <div class="complaint-card-meta">${fmtDate(n.date)} · Posted by ${n.author}</div>
+          </div>
+          <span class="badge ${priorityColor(n.priority)}">${n.priority}</span>
+        </div>
+        <div class="complaint-card-body">${n.body}</div>
+      </div>`).join('') :
+      `<div class="text-center text-muted" style="padding:60px">
+        <div style="font-size:48px;margin-bottom:16px">📭</div>
+        <div>No notices posted yet.</div>
+      </div>`}
+    </div>
+  </div>`;
+</script></body></html>

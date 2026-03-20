@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Reports – Siri Girls Hostel</title><link rel="stylesheet" href="../css/style.css"/>
+<style>
+.report-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px; margin-bottom:20px; }
+.report-title { font-family:'Cormorant Garamond',serif; font-size:1.2rem; font-weight:700; margin-bottom:18px; color:var(--ink); }
+.prog-row { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
+.prog-label { width:120px; font-size:13px; color:var(--ink2); flex-shrink:0; }
+.prog-bar-wrap { flex:1; background:var(--cream2); border-radius:50px; height:10px; overflow:hidden; }
+.prog-fill { height:100%; border-radius:50px; }
+.prog-val { width:44px; text-align:right; font-size:13px; font-weight:600; font-family:'DM Mono',monospace; flex-shrink:0; }
+</style></head>
+<body><div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script><script src="../js/sidebar.js"></script>
+<script>
+requireAuth('admin');
+const students    = getStudents();
+const rooms       = getRooms();
+const complaints  = getComplaints();
+const paid        = students.filter(s=>s.feeStatus==='Paid').length;
+const pending     = students.filter(s=>s.feeStatus==='Pending').length;
+const overdue     = students.filter(s=>s.feeStatus==='Overdue').length;
+const occupied    = rooms.filter(r=>r.status==='occupied').length;
+const vacant      = rooms.filter(r=>r.status==='vacant').length;
+const maint       = rooms.filter(r=>r.status==='maintenance').length;
+const resolved    = complaints.filter(c=>c.status==='Resolved').length;
+const open        = complaints.filter(c=>c.status==='Open').length;
+const inprog      = complaints.filter(c=>c.status==='In Progress').length;
+const totalRev    = paid * 9650;
+const months      = ['Jul','Aug','Sep','Oct','Nov','Dec'];
+const revData     = [62,70,75,80,88,94];
+const occData     = [58,65,70,76,82,Math.round(occupied/rooms.length*100)];
+
+document.getElementById('appRoot').innerHTML = buildAdminSidebar('reports') + `
+<div class="main-area">
+  <div class="topbar"><div><div class="topbar-title">Reports &amp; Analytics</div><div class="topbar-sub">Hostel performance overview</div></div>
+  <div class="topbar-right"><button class="btn btn-ghost btn-sm" onclick="showToast('📄','Generating PDF report...','info')">Export Report</button></div></div>
+  <div class="content">
+
+    <div class="stats-grid mb-24">
+      <div class="stat-card"><div class="stat-icon">🎓</div><div class="stat-label">Total Students</div><div class="stat-value text-rose">${students.length}</div></div>
+      <div class="stat-card"><div class="stat-icon">🏠</div><div class="stat-label">Occupancy Rate</div><div class="stat-value text-gold">${Math.round(occupied/rooms.length*100)}%</div></div>
+      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-label">Revenue (Dec)</div><div class="stat-value text-green">₹${(totalRev/100000).toFixed(1)}L</div></div>
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">Resolved Complaints</div><div class="stat-value">${resolved}/${complaints.length}</div></div>
+    </div>
+
+    <div class="grid-2 mb-24">
+      <!-- Fee Collection -->
+      <div class="report-card">
+        <div class="report-title">💳 Fee Collection Status</div>
+        <div class="prog-row"><div class="prog-label">Paid</div><div class="prog-bar-wrap"><div class="prog-fill" style="width:${Math.round(paid/students.length*100)}%;background:#5aab82"></div></div><div class="prog-val text-green">${paid}</div></div>
+        <div class="prog-row"><div class="prog-label">Pending</div><div class="prog-bar-wrap"><div class="prog-fill" style="width:${Math.round(pending/students.length*100)}%;background:var(--gold)"></div></div><div class="prog-val text-gold">${pending}</div></div>
+        <div class="prog-row"><div class="prog-label">Overdue</div><div class="prog-bar-wrap"><div class="prog-fill" style="width:${Math.round(overdue/students.length*100)}%;background:#e05a5a"></div></div><div class="prog-val text-red">${overdue}</div></div>
+      </div>
+      <!-- Room Status -->
+      <div class="report-card">
+        <div class="report-title">🏠 Room Status</div>
+        <div class="prog-row"><div class="prog-label">Occupied</div><div class="prog-bar-wrap"><div class="prog-fill" style="width:${Math.round(occupied/rooms.length*100)}%;background:var(--rose)"></div></div><div class="prog-val text-rose">${occupied}</div></div>
+        <div class="prog-row"><div class="prog-label">Vacant</div><div class="prog-bar-wrap"><div class="prog-fill" style="width:${Math.round(vacant/rooms.length*100)}%;background:#5aab82"></div></div><div class="prog-val text-green">${vacant}</div></div>
+        <div class="prog-row"><div class="prog-label">Maintenance</div><div class="prog-bar-wrap"><div class="prog-fill" style="width:${Math.round(maint/rooms.length*100)}%;background:var(--gold)"></div></div><div class="prog-val text-gold">${maint}</div></div>
+      </div>
+    </div>
+
+    <div class="grid-2 mb-24">
+      <!-- Revenue trend -->
+      <div class="report-card">
+        <div class="report-title">📈 Revenue Trend (6 months)</div>
+        <div class="mini-chart" style="height:130px">
+          ${months.map((m,i)=>`<div class="mini-bar-wrap">
+            <div class="mini-bar" style="height:${revData[i]}%;background:linear-gradient(180deg,var(--rose),var(--rose-dark));"></div>
+            <div class="mini-bar-label">${m}</div>
+          </div>`).join('')}
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:12px">₹ collected per month (% of target)</div>
+      </div>
+      <!-- Occupancy trend -->
+      <div class="report-card">
+        <div class="report-title">🏠 Occupancy Trend (6 months)</div>
+        <div class="mini-chart" style="height:130px">
+          ${months.map((m,i)=>`<div class="mini-bar-wrap">
+            <div class="mini-bar" style="height:${occData[i]}%;background:linear-gradient(180deg,var(--gold),#a07830);"></div>
+            <div class="mini-bar-label">${m}</div>
+          </div>`).join('')}
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:12px">% rooms occupied per month</div>
+      </div>
+    </div>
+
+    <!-- Complaints summary -->
+    <div class="report-card">
+      <div class="report-title">📋 Complaint Summary</div>
+      <div class="prog-row"><div class="prog-label">Open</div><div class="prog-bar-wrap"><div class="prog-fill" style="width:${complaints.length?Math.round(open/complaints.length*100):0}%;background:#e05a5a"></div></div><div class="prog-val text-red">${open}</div></div>
+      <div class="prog-row"><div class="prog-label">In Progress</div><div class="prog-bar-wrap"><div class="prog-fill" style="width:${complaints.length?Math.round(inprog/complaints.length*100):0}%;background:#5a8ee0"></div></div><div class="prog-val" style="color:#3d6fc0">${inprog}</div></div>
+      <div class="prog-row"><div class="prog-label">Resolved</div><div class="prog-bar-wrap"><div class="prog-fill" style="width:${complaints.length?Math.round(resolved/complaints.length*100):0}%;background:#5aab82"></div></div><div class="prog-val text-green">${resolved}</div></div>
+      <div style="margin-top:10px;font-size:13px;color:var(--muted)">Resolution rate: <strong class="text-green">${complaints.length?Math.round(resolved/complaints.length*100):0}%</strong></div>
+    </div>
+
+  </div>
+</div>`;
+updateComplaintBadge();
+</script></body></html>

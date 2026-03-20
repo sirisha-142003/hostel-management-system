@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Home – Siri Girls Hostel</title><link rel="stylesheet" href="../css/style.css"/>
+<style>
+.quick-action { background:var(--white); border:1px solid var(--border); border-radius:var(--radius-lg); padding:22px; text-align:center; cursor:pointer; transition:var(--transition); text-decoration:none; color:var(--ink); display:block; }
+.quick-action:hover { border-color:var(--rose-light); box-shadow:var(--shadow-md); transform:translateY(-3px); }
+.qa-icon { font-size:32px; margin-bottom:10px; }
+.qa-name { font-size:14px; font-weight:600; }
+</style></head>
+<body><div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script><script src="../js/sidebar.js"></script>
+<script>
+const sess = requireAuth('student');
+if (sess) {
+  const student = getStudents().find(s=>s.id===sess.id);
+  if (!student) { clearSession(); window.location.href='../index.html'; }
+  const notices = getNotices();
+  const complaints = getComplaints().filter(c=>c.studentId===sess.id);
+  const menu = getMessMenu();
+  const room = getRooms().find(r=>r.num===student.room)||{};
+  const today_menu = menu[dayName()]||{breakfast:'—',lunch:'—',dinner:'—'};
+
+  document.getElementById('appRoot').innerHTML = `
+    ${buildStudentSidebar('home')}
+    <div class="main-area">
+      <div class="topbar">
+        <div>
+          <div class="topbar-title">Good ${new Date().getHours()<12?'Morning':new Date().getHours()<17?'Afternoon':'Evening'}, ${student.name.split(' ')[0]}! 🌸</div>
+          <div class="topbar-sub">Siri Girls Hostel · ${new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'})}</div>
+        </div>
+        <div class="topbar-right"><div class="notif-btn">🔔<div class="notif-dot"></div></div></div>
+      </div>
+      <div class="content">
+        <!-- Stats -->
+        <div class="stats-grid mb-24">
+          <div class="stat-card"><div class="stat-icon">🛏️</div><div class="stat-label">My Room</div><div class="stat-value text-rose mono">${student.room}</div><div class="stat-change">${student.type} · ${student.floor} Floor</div></div>
+          <div class="stat-card"><div class="stat-icon">💳</div><div class="stat-label">Fee Status</div><div class="stat-value" style="color:${student.feeStatus==='Paid'?'#3d8a65':student.feeStatus==='Pending'?'var(--gold)':'#b84040'};font-size:1.6rem">${student.feeStatus}</div><div class="stat-change">December 2024</div></div>
+          <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">My Complaints</div><div class="stat-value text-gold">${complaints.length}</div><div class="stat-change">${complaints.filter(c=>c.status!=='Resolved').length} open</div></div>
+          <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-label">Days Here</div><div class="stat-value">${Math.max(0,Math.floor((new Date()-new Date(student.joinDate))/(1000*60*60*24)))}</div><div class="stat-change">Since ${fmtDate(student.joinDate)}</div></div>
+        </div>
+
+        <div class="grid-2 mb-24">
+          <!-- Today's menu -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">🍽️ Today's Menu</span><a href="student-mess.html" class="btn btn-ghost btn-sm">Full Week →</a></div>
+            <div class="card-body">
+              <div style="margin-bottom:14px"><div class="form-label">☀️ Breakfast</div><div style="font-size:14px;color:var(--ink2)">${today_menu.breakfast}</div></div>
+              <div style="margin-bottom:14px"><div class="form-label">🌤️ Lunch</div><div style="font-size:14px;color:var(--ink2)">${today_menu.lunch}</div></div>
+              <div><div class="form-label">🌙 Dinner</div><div style="font-size:14px;color:var(--ink2)">${today_menu.dinner}</div></div>
+            </div>
+          </div>
+          <!-- Latest Notice -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">📢 Latest Notice</span><a href="student-notices.html" class="btn btn-ghost btn-sm">All Notices →</a></div>
+            <div class="card-body">
+              ${notices.length ? `
+              <div class="flex-between mb-8"><span style="font-weight:600;font-size:15px">${notices[0].title}</span><span class="badge ${priorityColor(notices[0].priority)}">${notices[0].priority}</span></div>
+              <div style="font-size:13px;color:var(--muted);margin-bottom:10px">${fmtDate(notices[0].date)} · ${notices[0].author}</div>
+              <div style="font-size:14px;color:var(--ink2);line-height:1.7">${notices[0].body}</div>` : '<div class="text-muted">No notices yet.</div>'}
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div style="margin-bottom:8px"><h3 style="font-family:Cormorant Garamond,serif;font-size:1.3rem">Quick Actions</h3></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px">
+          <a href="student-fees.html" class="quick-action"><div class="qa-icon">💳</div><div class="qa-name">Pay Fees</div></a>
+          <a href="student-complaints.html" class="quick-action"><div class="qa-icon">📋</div><div class="qa-name">File Complaint</div></a>
+          <a href="student-visitors.html" class="quick-action"><div class="qa-icon">👥</div><div class="qa-name">Visitor Pass</div></a>
+          <a href="student-notices.html" class="quick-action"><div class="qa-icon">📢</div><div class="qa-name">Notices</div></a>
+          <a href="student-room.html" class="quick-action"><div class="qa-icon">🛏️</div><div class="qa-name">My Room</div></a>
+          <a href="student-amenities.html" class="quick-action"><div class="qa-icon">✨</div><div class="qa-name">Amenities</div></a>
+        </div>
+      </div>
+    </div>`;
+}
+</script></body></html>

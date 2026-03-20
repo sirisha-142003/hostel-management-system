@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Fees – Siri Girls Hostel</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+<div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script>
+<script src="../js/sidebar.js"></script>
+<script>
+const sess = requireAuth('admin');
+if (sess) renderPage();
+
+function renderPage() {
+  const students = getStudents();
+  const paid    = students.filter(s=>s.feeStatus==='Paid').length;
+  const pending = students.filter(s=>s.feeStatus==='Pending').length;
+  const overdue = students.filter(s=>s.feeStatus==='Overdue').length;
+  const totalCollected = paid * 9650;
+  const totalPending   = (pending+overdue) * 9650;
+
+  document.getElementById('appRoot').innerHTML = `
+    ${buildAdminSidebar('fees')}
+    <div class="main-area">
+      <div class="topbar">
+        <div><div class="topbar-title">Fees &amp; Billing</div><div class="topbar-sub">December 2024 — Fee Overview</div></div>
+        <div class="topbar-right">
+          <button class="btn btn-ghost btn-sm" onclick="showToast('📄','Exporting report...','info')">Export PDF</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px">
+          <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-label">Collected</div><div class="stat-value text-green">₹${(totalCollected/100000).toFixed(1)}L</div><div class="stat-change">${paid} students paid</div></div>
+          <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-label">Pending</div><div class="stat-value" style="color:var(--gold)">₹${(pending*9650/100000).toFixed(1)}L</div><div class="stat-change">${pending} students</div></div>
+          <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-label">Overdue</div><div class="stat-value text-red">₹${(overdue*9650/100000).toFixed(1)}L</div><div class="stat-change">${overdue} students</div></div>
+          <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-label">Collection %</div><div class="stat-value text-rose">${Math.round(paid/students.length*100)}%</div><div class="stat-change">This month</div></div>
+        </div>
+
+        <div class="toolbar">
+          <div class="search-input-wrap"><span>🔍</span><input type="text" id="feeSearch" placeholder="Search student..." oninput="filterFees()"/></div>
+          <select class="form-control" id="feeStatusFilter" style="width:160px" onchange="filterFees()">
+            <option value="">All Status</option><option>Paid</option><option>Pending</option><option>Overdue</option>
+          </select>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Fee Records — December 2024</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Student</th><th>Room</th><th>Rent</th><th>Mess</th><th>Electricity</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="feesTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  updateComplaintBadge();
+  filterFees();
+}
+
+function filterFees() {
+  const students = getStudents();
+  const q  = document.getElementById('feeSearch')?.value.toLowerCase()||'';
+  const st = document.getElementById('feeStatusFilter')?.value||'';
+  const filtered = students.filter(s=>(!q||s.name.toLowerCase().includes(q)||s.id.toLowerCase().includes(q))&&(!st||s.feeStatus===st));
+  const tbody = document.getElementById('feesTable');
+  if(!tbody) return;
+  tbody.innerHTML = filtered.map(s=>{
+    const rent=getRooms().find(r=>r.num===s.room)?.rent||6500;
+    const mess=2500,elec=450,total=rent+mess+elec;
+    return `<tr>
+      <td><strong>${s.name}</strong><br><span class="mono" style="font-size:11px;color:var(--muted)">${s.id}</span></td>
+      <td class="mono">${s.room}</td>
+      <td class="mono">₹${rent.toLocaleString('en-IN')}</td>
+      <td class="mono">₹${mess.toLocaleString('en-IN')}</td>
+      <td class="mono">₹${elec}</td>
+      <td class="mono text-rose fw-600">₹${total.toLocaleString('en-IN')}</td>
+      <td><span class="badge ${feeColor(s.feeStatus)}">${s.feeStatus}</span></td>
+      <td>
+        <select class="form-control" style="width:120px;font-size:12px;padding:5px 10px" onchange="updateFee('${s.id}',this.value)">
+          <option ${s.feeStatus==='Paid'?'selected':''}>Paid</option>
+          <option ${s.feeStatus==='Pending'?'selected':''}>Pending</option>
+          <option ${s.feeStatus==='Overdue'?'selected':''}>Overdue</option>
+        </select>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function updateFee(id, status) {
+  const students = getStudents();
+  const i = students.findIndex(s=>s.id===id);
+  if(i>-1){ students[i].feeStatus=status; setData('sgh_students',students); showToast('✅','Fee status updated!','success'); }
+}
+</script>
+</body>
+</html>

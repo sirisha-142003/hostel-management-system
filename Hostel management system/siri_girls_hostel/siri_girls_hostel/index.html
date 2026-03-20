@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Siri Girls Hostel</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    /* ---- LANDING SPECIFIC ---- */
+    body { background: var(--cream); overflow-x: hidden; }
+
+    /* Hero background layers */
+    .hero-wrap {
+      min-height: 100vh; position: relative; display: flex; flex-direction: column;
+      background: var(--cream);
+    }
+    .hero-petals {
+      position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
+    }
+    .petal {
+      position: absolute; border-radius: 50% 10% 50% 10%;
+      background: radial-gradient(circle, rgba(196,112,122,0.12), transparent 70%);
+      animation: floatPetal 14s ease-in-out infinite;
+    }
+    .petal:nth-child(1) { width: 500px; height: 500px; top: -100px; right: -100px; animation-delay: 0s; }
+    .petal:nth-child(2) { width: 350px; height: 350px; bottom: 100px; left: -80px; animation-delay: -5s; }
+    .petal:nth-child(3) { width: 250px; height: 250px; top: 40%; left: 60%; animation-delay: -8s; }
+    @keyframes floatPetal {
+      0%, 100% { transform: translate(0,0) rotate(0deg); }
+      33%  { transform: translate(20px,-30px) rotate(5deg); }
+      66%  { transform: translate(-15px,20px) rotate(-3deg); }
+    }
+    .dots-pattern {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image: radial-gradient(circle, rgba(196,112,122,0.08) 1.5px, transparent 1.5px);
+      background-size: 28px 28px;
+      mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 100%);
+    }
+
+    /* NAV */
+    .landing-nav {
+      position: relative; z-index: 10; display: flex; align-items: center;
+      justify-content: space-between; padding: 22px 64px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(253,248,245,0.85); backdrop-filter: blur(12px);
+    }
+    .nav-logo { display: flex; align-items: center; gap: 14px; }
+    .nav-logo-icon {
+      width: 46px; height: 46px; border-radius: 14px;
+      background: linear-gradient(135deg, var(--rose), var(--rose-dark));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; box-shadow: 0 4px 18px rgba(196,112,122,0.35);
+    }
+    .nav-logo-text { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 700; }
+    .nav-logo-text span { color: var(--rose); }
+    .nav-logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; }
+    .nav-btns { display: flex; gap: 12px; }
+
+    /* HERO */
+    .hero-section {
+      position: relative; z-index: 5; flex: 1;
+      display: flex; align-items: center; justify-content: center;
+      padding: 90px 64px 72px; gap: 80px;
+    }
+    .hero-left { flex: 1; max-width: 560px; }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--rose-pale); border: 1px solid var(--border2);
+      border-radius: 50px; padding: 6px 16px; margin-bottom: 26px;
+      font-size: 12px; color: var(--rose-dark); font-weight: 500; letter-spacing: 0.5px;
+    }
+    .hero-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2.6rem, 5.5vw, 4.2rem); font-weight: 700;
+      line-height: 1.1; margin-bottom: 22px; color: var(--ink);
+    }
+    .hero-title em { font-style: italic; color: var(--rose); }
+    .hero-desc { font-size: 16px; color: var(--ink2); line-height: 1.75; margin-bottom: 38px; max-width: 480px; }
+    .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 48px; }
+    .hero-stats { display: flex; gap: 36px; }
+    .hstat-val { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 700; color: var(--rose); }
+    .hstat-lbl { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* Hero right – visual card stack */
+    .hero-right { flex-shrink: 0; position: relative; width: 360px; height: 380px; }
+    .hero-card {
+      position: absolute; background: var(--white); border-radius: 22px;
+      box-shadow: var(--shadow-lg); border: 1px solid var(--border); overflow: hidden;
+    }
+    .hcard-main {
+      width: 280px; height: 320px; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(145deg, #FFF0F0, #FFF8F5);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 12px; z-index: 3;
+      animation: cardFloat 5s ease-in-out infinite;
+    }
+    @keyframes cardFloat {
+      0%,100%{transform:translate(-50%,-50%) translateY(0)} 50%{transform:translate(-50%,-50%) translateY(-10px)}
+    }
+    .hcard-main .big-emoji { font-size: 64px; }
+    .hcard-main .card-hostel-name { font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:700; color:var(--rose-dark); }
+    .hcard-main .card-tagline { font-size:12px; color:var(--muted); }
+    .hcard-fl {
+      width: 180px; height: 110px; right: -20px; top: 10px;
+      background: linear-gradient(135deg, var(--rose-pale), #fff);
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px; z-index: 2; animation: cardFloat2 6s ease-in-out infinite;
+    }
+    @keyframes cardFloat2 {
+      0%,100%{transform:rotate(3deg)} 50%{transform:rotate(3deg) translateY(-6px)}
+    }
+    .hcard-fl .fl-icon { font-size:30px; }
+    .hcard-fl .fl-text { font-size:13px; font-weight:600; color:var(--ink); }
+    .hcard-fl .fl-sub  { font-size:11px; color:var(--muted); }
+    .hcard-br {
+      width: 160px; height: 90px; left: 0px; bottom: 20px;
+      background: linear-gradient(135deg, #fff, var(--cream2));
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px; z-index: 2; animation: cardFloat3 7s ease-in-out infinite;
+    }
+    @keyframes cardFloat3 {
+      0%,100%{transform:rotate(-2deg)} 50%{transform:rotate(-2deg) translateY(-8px)}
+    }
+
+    /* FEATURES */
+    .features-section { position: relative; z-index: 5; padding: 80px 64px; background: var(--white); border-top: 1px solid var(--border); }
+    .section-eyebrow { font-size: 12px; color: var(--rose); font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; font-family: 'DM Mono', monospace; }
+    .section-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(1.8rem,3vw,2.8rem); font-weight: 700; margin-bottom: 10px; }
+    .section-sub { font-size: 15px; color: var(--muted); margin-bottom: 50px; max-width: 480px; }
+    .feat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px,1fr)); gap: 20px; }
+    .feat-item {
+      background: var(--cream); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 26px 22px;
+      transition: var(--transition); cursor: default; position: relative; overflow: hidden;
+    }
+    .feat-item::before {
+      content: ''; position: absolute; top: -30px; right: -30px;
+      width: 100px; height: 100px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(196,112,122,0.07), transparent 70%);
+      transition: var(--transition);
+    }
+    .feat-item:hover { border-color: var(--rose-light); box-shadow: var(--shadow-md); transform: translateY(-3px); }
+    .feat-item:hover::before { transform: scale(2); }
+    .feat-emoji { font-size: 32px; margin-bottom: 14px; }
+    .feat-name { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+    .feat-desc { font-size: 13px; color: var(--muted); line-height: 1.65; }
+
+    /* CTA STRIP */
+    .cta-strip {
+      position: relative; z-index: 5; padding: 72px 64px; text-align: center;
+      background: linear-gradient(135deg, var(--rose-pale), var(--cream));
+      border-top: 1px solid var(--border);
+    }
+    .cta-strip h2 { margin-bottom: 12px; }
+    .cta-strip p  { margin-bottom: 36px; color: var(--muted); font-size: 15px; }
+    .cta-btns     { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+    /* FOOTER */
+    .landing-footer {
+      background: var(--ink); color: rgba(255,255,255,0.7); text-align: center;
+      padding: 28px 40px; font-size: 13px;
+    }
+    .landing-footer strong { color: var(--rose-light); }
+
+    /* ANIMATIONS */
+    .fade-up { opacity: 0; transform: translateY(24px); animation: fadeUp 0.7s ease forwards; }
+    .fade-up:nth-child(2) { animation-delay: 0.1s; }
+    .fade-up:nth-child(3) { animation-delay: 0.2s; }
+    @keyframes fadeUp { to { opacity:1; transform:translateY(0); } }
+  </style>
+</head>
+<body>
+
+<div class="hero-wrap">
+  <div class="hero-petals">
+    <div class="petal"></div>
+    <div class="petal"></div>
+    <div class="petal"></div>
+  </div>
+  <div class="dots-pattern"></div>
+
+  <!-- NAV -->
+  <nav class="landing-nav">
+    <div class="nav-logo">
+      <div class="nav-logo-icon">🌸</div>
+      <div>
+        <div class="nav-logo-text"><span>Siri</span> Girls Hostel</div>
+        <div class="nav-logo-sub">Safe · Comfortable · Homely</div>
+      </div>
+    </div>
+    <div class="nav-btns">
+      <a href="pages/login.html?role=student" class="btn btn-secondary">🎓 Student Login</a>
+      <a href="pages/login.html?role=admin" class="btn btn-primary">🔑 Admin Login</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero-section">
+    <div class="hero-left">
+      <div class="hero-eyebrow fade-up">🌸 Since 2018 &nbsp;·&nbsp; Your home away from home</div>
+      <h1 class="hero-title fade-up">
+        Where every girl<br>
+        finds her <em>safe space</em><br>
+        & community
+      </h1>
+      <p class="hero-desc fade-up">
+        Siri Girls Hostel offers premium, secure, and comfortable accommodation for female students — with all the facilities you need to thrive academically and personally.
+      </p>
+      <div class="hero-actions fade-up">
+        <a href="pages/login.html?role=student" class="btn btn-primary btn-lg">🎓 Student Portal</a>
+        <a href="pages/login.html?role=admin" class="btn btn-secondary btn-lg">⚙️ Admin Dashboard</a>
+      </div>
+      <div class="hero-stats fade-up">
+        <div><div class="hstat-val">120+</div><div class="hstat-lbl">Happy Residents</div></div>
+        <div><div class="hstat-val">60+</div><div class="hstat-lbl">Rooms Available</div></div>
+        <div><div class="hstat-val">6+</div><div class="hstat-lbl">Years of Trust</div></div>
+      </div>
+    </div>
+
+    <div class="hero-right">
+      <div class="hero-card hcard-main">
+        <div class="big-emoji">🌸</div>
+        <div class="card-hostel-name">Siri Girls Hostel</div>
+        <div class="card-tagline">Hyderabad</div>
+      </div>
+      <div class="hero-card hcard-fl">
+        <div class="fl-icon">🔒</div>
+        <div>
+          <div class="fl-text">24/7 Security</div>
+          <div class="fl-sub">Biometric Access</div>
+        </div>
+      </div>
+      <div class="hero-card hcard-br">
+        <div class="fl-icon">📶</div>
+        <div>
+          <div class="fl-text">100 Mbps</div>
+          <div class="fl-sub">Free Wi-Fi</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- FEATURES -->
+<section class="features-section">
+  <div class="section-eyebrow">✦ Facilities</div>
+  <h2 class="section-title">Everything Under One Roof</h2>
+  <p class="section-sub">We've designed every corner of Siri Girls Hostel to keep you safe, comfortable, and productive.</p>
+  <div class="feat-grid">
+    <div class="feat-item"><div class="feat-emoji">🏠</div><div class="feat-name">Furnished Rooms</div><div class="feat-desc">Single, double, and triple rooms — all furnished with beds, wardrobes, study desks, and fans/AC.</div></div>
+    <div class="feat-item"><div class="feat-emoji">🍽️</div><div class="feat-name">Mess & Cafeteria</div><div class="feat-desc">Fresh, nutritious home-cooked meals three times a day. Special diet options on request.</div></div>
+    <div class="feat-item"><div class="feat-emoji">📶</div><div class="feat-name">High-Speed Wi-Fi</div><div class="feat-desc">100 Mbps fiber internet, all floors, 24 hours. Dedicated study zone with 200 Mbps.</div></div>
+    <div class="feat-item"><div class="feat-emoji">🔒</div><div class="feat-name">Secure Campus</div><div class="feat-desc">Biometric entry, 24×7 CCTV, trained female security staff, and a strict visitor management system.</div></div>
+    <div class="feat-item"><div class="feat-emoji">🚿</div><div class="feat-name">Hot Water</div><div class="feat-desc">Solar + electric geyser. 24-hour hot water available in all floors and attached bathrooms.</div></div>
+    <div class="feat-item"><div class="feat-emoji">🧺</div><div class="feat-name">Laundry Room</div><div class="feat-desc">Washing machines and dryers on every floor. Paid express laundry also available.</div></div>
+    <div class="feat-item"><div class="feat-emoji">📚</div><div class="feat-name">Study Room</div><div class="feat-desc">AC study room open 24 hours. Silent zone policy. Perfect for exam season.</div></div>
+    <div class="feat-item"><div class="feat-emoji">⚡</div><div class="feat-name">Power Backup</div><div class="feat-desc">100% DG backup for all rooms and common areas. Zero power cut interruptions.</div></div>
+    <div class="feat-item"><div class="feat-emoji">💊</div><div class="feat-name">Medical Support</div><div class="feat-desc">First-aid kit in every floor. Doctor visits on Tuesday and Friday. Hospital tie-up.</div></div>
+    <div class="feat-item"><div class="feat-emoji">🚌</div><div class="feat-name">Transport</div><div class="feat-desc">Morning and evening shuttles to nearby colleges and metro stations.</div></div>
+    <div class="feat-item"><div class="feat-emoji">🎮</div><div class="feat-name">Recreation</div><div class="feat-desc">TV lounge, indoor games, terrace garden. Monthly events and celebrations for residents.</div></div>
+    <div class="feat-item"><div class="feat-emoji">🌿</div><div class="feat-name">Clean Environment</div><div class="feat-desc">Daily housekeeping. Deep cleaning every Sunday. Pest control once a month.</div></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-strip">
+  <div class="section-eyebrow">✦ Get Started</div>
+  <h2>Ready to join Siri Girls Hostel?</h2>
+  <p>Log in to your portal to manage your stay, pay fees, file requests, and stay connected.</p>
+  <div class="cta-btns">
+    <a href="pages/login.html?role=student" class="btn btn-primary btn-lg">🎓 Student Login</a>
+    <a href="pages/login.html?role=admin" class="btn btn-gold btn-lg">🔑 Admin Login</a>
+  </div>
+</section>
+
+<footer class="landing-footer">
+  <p>© 2024 <strong>Siri Girls Hostel</strong>, Hyderabad &nbsp;·&nbsp; Safe · Comfortable · Homely &nbsp;·&nbsp; Built with 💕</p>
+</footer>
+
+<script src="js/app.js"></script>
+</body>
+</html>

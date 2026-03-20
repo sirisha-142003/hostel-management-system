@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Complaints – Siri Girls Hostel</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+<div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script>
+<script src="../js/sidebar.js"></script>
+<script>
+const sess = requireAuth('admin');
+if (sess) renderPage();
+
+function renderPage() {
+  document.getElementById('appRoot').innerHTML = `
+    ${buildAdminSidebar('complaints')}
+    <div class="main-area">
+      <div class="topbar">
+        <div><div class="topbar-title">Complaints</div><div class="topbar-sub">Review and resolve student complaints</div></div>
+      </div>
+      <div class="content">
+        <div class="toolbar">
+          <div class="search-input-wrap"><span>🔍</span><input type="text" id="cSearch" placeholder="Search complaints..." oninput="renderComplaints()"/></div>
+          <select class="form-control" id="cStatus" style="width:160px" onchange="renderComplaints()">
+            <option value="">All Status</option><option>Open</option><option>In Progress</option><option>Resolved</option>
+          </select>
+          <select class="form-control" id="cPriority" style="width:140px" onchange="renderComplaints()">
+            <option value="">All Priority</option><option>High</option><option>Medium</option><option>Low</option>
+          </select>
+        </div>
+        <div id="compList"></div>
+      </div>
+    </div>`;
+  updateComplaintBadge();
+  renderComplaints();
+}
+
+function renderComplaints() {
+  const complaints = getComplaints();
+  const q  = document.getElementById('cSearch')?.value.toLowerCase()||'';
+  const st = document.getElementById('cStatus')?.value||'';
+  const pr = document.getElementById('cPriority')?.value||'';
+  const filtered = complaints.filter(c=>
+    (!q||c.title.toLowerCase().includes(q)||c.studentName.toLowerCase().includes(q)||c.room.toLowerCase().includes(q))&&
+    (!st||c.status===st)&&(!pr||c.priority===pr)
+  );
+  const container = document.getElementById('compList');
+  if(!filtered.length){ container.innerHTML=`<div class="text-center text-muted" style="padding:60px">No complaints found.</div>`; return; }
+  container.innerHTML = filtered.map(c=>`
+    <div class="complaint-card">
+      <div class="complaint-card-header">
+        <div>
+          <div class="complaint-card-title">${c.title}</div>
+          <div class="complaint-card-meta">🎓 ${c.studentName} · Room ${c.room} · ${fmtDate(c.date)} · 🏷 ${c.category}</div>
+        </div>
+        <div class="flex gap-8">
+          <span class="badge ${priorityColor(c.priority)}">${c.priority}</span>
+          <span class="badge ${statusColor(c.status)}">${c.status}</span>
+        </div>
+      </div>
+      <div class="complaint-card-body">${c.desc}</div>
+      <div class="flex gap-8 flex-wrap">
+        ${c.status!=='Resolved'?`
+          <button class="btn btn-success btn-sm" onclick="updateComp('${c.id}','Resolved')">✓ Mark Resolved</button>
+          <button class="btn btn-info btn-sm" onclick="updateComp('${c.id}','In Progress')">🔧 Mark In Progress</button>`:
+          `<span class="badge badge-green">✓ Resolved</span>`}
+        <button class="btn btn-ghost btn-sm" onclick="viewComp('${c.id}')">View Details</button>
+      </div>
+    </div>`).join('');
+}
+
+function updateComp(id, status) {
+  const complaints = getComplaints();
+  const i = complaints.findIndex(c=>c.id===id);
+  if(i>-1){ complaints[i].status=status; setData('sgh_complaints',complaints); showToast('✅',`Complaint marked as ${status}`,'success'); renderComplaints(); updateComplaintBadge(); }
+}
+
+function viewComp(id) {
+  const c = getComplaints().find(x=>x.id===id);
+  if(!c) return;
+  openModal(`
+    <button class="modal-close-btn" onclick="closeModal()">✕</button>
+    <div class="modal-title">${c.title}</div>
+    <div class="modal-sub">${c.id} · ${fmtDate(c.date)}</div>
+    <div class="info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:20px">
+      <div class="info-item"><div class="info-label">Student</div><div class="info-value">${c.studentName}</div></div>
+      <div class="info-item"><div class="info-label">Room</div><div class="info-value mono">${c.room}</div></div>
+      <div class="info-item"><div class="info-label">Category</div><div class="info-value">${c.category}</div></div>
+      <div class="info-item"><div class="info-label">Priority</div><div class="info-value"><span class="badge ${priorityColor(c.priority)}">${c.priority}</span></div></div>
+      <div class="info-item"><div class="info-label">Status</div><div class="info-value"><span class="badge ${statusColor(c.status)}">${c.status}</span></div></div>
+    </div>
+    <div class="form-label">Description</div>
+    <div style="background:var(--cream2);border-radius:10px;padding:14px;font-size:14px;color:var(--ink2);line-height:1.7;margin-bottom:20px">${c.desc}</div>
+    <div class="flex gap-8 flex-wrap">
+      ${c.status!=='Resolved'?`<button class="btn btn-success btn-sm" onclick="closeModal();updateComp('${c.id}','Resolved')">✓ Resolve</button>
+      <button class="btn btn-info btn-sm" onclick="closeModal();updateComp('${c.id}','In Progress')">In Progress</button>`:''}
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Close</button>
+    </div>`);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mess Schedule – Siri Girls Hostel</title><link rel="stylesheet" href="../css/style.css"/>
+<style>
+.day-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; transition:var(--transition); }
+.day-card:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); }
+.day-card.today { border:2px solid var(--rose); }
+.day-head { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg,var(--rose-pale),var(--cream)); }
+.day-name { font-family:'Cormorant Garamond',serif; font-size:1.15rem; font-weight:700; }
+.meal-slot { padding:13px 18px; border-bottom:1px solid var(--border); }
+.meal-slot:last-child { border:none; }
+.meal-time { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px; font-family:'DM Mono',monospace; }
+.meal-food { font-size:13px; color:var(--ink2); line-height:1.55; }
+</style></head>
+<body><div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script><script src="../js/sidebar.js"></script>
+<script>
+const sess = requireAuth('student');
+if (sess) {
+  const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const todayName = dayName();
+  const menu = getMessMenu();
+
+  document.getElementById('appRoot').innerHTML = `
+    ${buildStudentSidebar('mess')}
+    <div class="main-area">
+      <div class="topbar">
+        <div><div class="topbar-title">Mess Schedule</div><div class="topbar-sub">Weekly meal plan · Siri Girls Hostel</div></div>
+      </div>
+      <div class="content">
+        <div class="alert alert-info mb-24">
+          🍽️ Meal timings: Breakfast 7:00–9:00 AM · Lunch 12:30–2:30 PM · Dinner 7:30–9:30 PM. Special dietary requests can be placed with the mess supervisor.
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px">
+          ${DAYS.map(d => `
+          <div class="day-card ${d===todayName?'today':''}">
+            <div class="day-head">
+              <div class="day-name">${d}</div>
+              ${d===todayName?'<span class="badge badge-rose">Today</span>':''}
+            </div>
+            <div class="meal-slot">
+              <div class="meal-time">☀️ Breakfast</div>
+              <div class="meal-food">${menu[d]?.breakfast||'—'}</div>
+            </div>
+            <div class="meal-slot">
+              <div class="meal-time">🌤️ Lunch</div>
+              <div class="meal-food">${menu[d]?.lunch||'—'}</div>
+            </div>
+            <div class="meal-slot">
+              <div class="meal-time">🌙 Dinner</div>
+              <div class="meal-food">${menu[d]?.dinner||'—'}</div>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+</script></body></html>

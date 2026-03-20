@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rooms – Siri Girls Hostel</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+<div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script>
+<script src="../js/sidebar.js"></script>
+<script>
+const sess = requireAuth('admin');
+if (sess) renderPage();
+
+function renderPage() {
+  document.getElementById('appRoot').innerHTML = `
+    ${buildAdminSidebar('rooms')}
+    <div class="main-area">
+      <div class="topbar">
+        <div><div class="topbar-title">Room Management</div><div class="topbar-sub">Manage all hostel rooms</div></div>
+        <div class="topbar-right"><button class="btn btn-primary" onclick="openAddRoom()">+ Add Room</button></div>
+      </div>
+      <div class="content">
+        <div id="statsRow" class="stats-grid" style="grid-template-columns:repeat(3,1fr)"></div>
+        <div class="toolbar">
+          <div class="search-input-wrap"><span>🔍</span><input type="text" id="searchInp" placeholder="Search room number..." oninput="renderGrid()"/></div>
+          <select class="form-control" id="typeFilter" style="width:140px" onchange="renderGrid()"><option value="">All Types</option><option>Single</option><option>Double</option><option>Triple</option></select>
+          <select class="form-control" id="statusFilter" style="width:140px" onchange="renderGrid()"><option value="">All Status</option><option>vacant</option><option>occupied</option><option>maintenance</option></select>
+        </div>
+        <div id="roomGrid" class="rooms-grid"></div>
+      </div>
+    </div>`;
+  updateComplaintBadge();
+  renderStats();
+  renderGrid();
+}
+
+function renderStats() {
+  const rooms = getRooms();
+  const oc = rooms.filter(r=>r.status==='occupied').length;
+  const va = rooms.filter(r=>r.status==='vacant').length;
+  const ma = rooms.filter(r=>r.status==='maintenance').length;
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card"><div class="stat-icon">🟢</div><div class="stat-label">Vacant</div><div class="stat-value text-green">${va}</div><div class="stat-change">Ready to allocate</div></div>
+    <div class="stat-card"><div class="stat-icon">🌸</div><div class="stat-label">Occupied</div><div class="stat-value text-rose">${oc}</div><div class="stat-change">Currently in use</div></div>
+    <div class="stat-card"><div class="stat-icon">🔧</div><div class="stat-label">Maintenance</div><div class="stat-value" style="color:var(--gold)">${ma}</div><div class="stat-change">Under repair</div></div>`;
+}
+
+function renderGrid() {
+  const rooms = getRooms();
+  const q  = document.getElementById('searchInp')?.value.toLowerCase()||'';
+  const ty = document.getElementById('typeFilter')?.value||'';
+  const st = document.getElementById('statusFilter')?.value||'';
+  const filtered = rooms.filter(r=>
+    (!q || r.num.toLowerCase().includes(q)) &&
+    (!ty || r.type===ty) &&
+    (!st || r.status===st)
+  );
+  const grid = document.getElementById('roomGrid');
+  if (!filtered.length) { grid.innerHTML=`<div class="text-muted text-center" style="padding:40px;grid-column:1/-1">No rooms found.</div>`; return; }
+  grid.innerHTML = filtered.map(r=>`
+    <div class="room-tile ${r.status}" onclick="viewRoom('${r.num}')">
+      <div class="room-floor-tag">${r.floor} Fl.</div>
+      <div class="room-num">${r.num}</div>
+      <div class="room-type-tag">${r.type} Sharing</div>
+      <span class="badge ${r.status==='vacant'?'badge-green':r.status==='occupied'?'badge-rose':'badge-red'}">${r.status}</span>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px" class="mono">₹${r.rent.toLocaleString('en-IN')}/mo</div>
+    </div>`).join('');
+}
+
+function viewRoom(num) {
+  const r = getRooms().find(x=>x.num===num);
+  const students = getStudents();
+  const resident = students.find(s=>s.room===num);
+  if(!r) return;
+  openModal(`
+    <button class="modal-close-btn" onclick="closeModal()">✕</button>
+    <div class="modal-title">Room ${r.num}</div>
+    <div class="modal-sub">${r.type} Sharing · ${r.floor} Floor</div>
+    <div class="info-grid" style="grid-template-columns:1fr 1fr">
+      <div class="info-item"><div class="info-label">Room Number</div><div class="info-value mono text-rose">${r.num}</div></div>
+      <div class="info-item"><div class="info-label">Type</div><div class="info-value">${r.type} Sharing</div></div>
+      <div class="info-item"><div class="info-label">Floor</div><div class="info-value">${r.floor}</div></div>
+      <div class="info-item"><div class="info-label">Status</div><div class="info-value"><span class="badge ${r.status==='vacant'?'badge-green':r.status==='occupied'?'badge-rose':'badge-red'}">${r.status}</span></div></div>
+      <div class="info-item"><div class="info-label">Monthly Rent</div><div class="info-value mono text-gold">₹${r.rent.toLocaleString('en-IN')}</div></div>
+      <div class="info-item"><div class="info-label">Amenities</div><div class="info-value" style="font-size:13px">${r.amenities}</div></div>
+    </div>
+    ${resident ? `<hr class="divider"/><div style="font-weight:600;margin-bottom:8px">Current Resident</div>
+    <div style="display:flex;align-items:center;gap:14px;background:var(--cream2);border-radius:12px;padding:14px">
+      <div class="s-avatar">${resident.name[0]}</div>
+      <div><div style="font-weight:600">${resident.name}</div><div style="font-size:12px;color:var(--muted)">${resident.id} · ${resident.college}</div></div>
+    </div>` : `<div class="alert alert-success mt-16">✅ This room is currently vacant and available for allocation.</div>`}
+    <div class="flex gap-12 mt-16 flex-wrap">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal();editRoom('${r.num}')">✏️ Edit</button>
+      <button class="btn btn-ghost btn-sm text-red" onclick="closeModal();deleteRoom('${r.num}')">🗑 Delete</button>
+    </div>`);
+}
+
+function openAddRoom() {
+  openModal(`
+    <button class="modal-close-btn" onclick="closeModal()">✕</button>
+    <div class="modal-title">Add New Room</div>
+    <div class="modal-sub">Add a room to the hostel inventory</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Room Number *</label><input class="form-control" id="ar_num" placeholder="e.g. D-401"/></div>
+      <div class="form-group"><label class="form-label">Floor *</label>
+        <select class="form-control" id="ar_floor"><option>1st</option><option>2nd</option><option>3rd</option><option>4th</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Type *</label>
+        <select class="form-control" id="ar_type"><option>Single</option><option>Double</option><option>Triple</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Monthly Rent (₹) *</label><input class="form-control" id="ar_rent" placeholder="9000"/></div>
+    </div>
+    <div class="form-group form-full"><label class="form-label">Amenities</label><input class="form-control" id="ar_amen" placeholder="AC, Attached Bath, Wi-Fi, Wardrobe..."/></div>
+    <div class="form-group"><label class="form-label">Status</label>
+      <select class="form-control" id="ar_status"><option>vacant</option><option>occupied</option><option>maintenance</option></select>
+    </div>
+    <div id="ar_err" class="form-error hidden mb-8"></div>
+    <button class="btn btn-primary btn-full" onclick="saveRoom()">Add Room</button>`);
+}
+
+function saveRoom() {
+  const num = document.getElementById('ar_num').value.trim();
+  const rent = parseInt(document.getElementById('ar_rent').value);
+  if(!num || isNaN(rent)) { document.getElementById('ar_err').textContent='Room number and rent are required.'; document.getElementById('ar_err').classList.remove('hidden'); return; }
+  const rooms = getRooms();
+  if(rooms.find(r=>r.num===num)) { document.getElementById('ar_err').textContent='Room number already exists.'; document.getElementById('ar_err').classList.remove('hidden'); return; }
+  rooms.push({ num, floor: document.getElementById('ar_floor').value, type: document.getElementById('ar_type').value, rent, amenities: document.getElementById('ar_amen').value.trim(), status: document.getElementById('ar_status').value });
+  setData('sgh_rooms',rooms);
+  closeModal(); showToast('✅',`Room ${num} added!`,'success'); renderStats(); renderGrid();
+}
+
+function editRoom(num) {
+  const r = getRooms().find(x=>x.num===num);
+  if(!r) return;
+  openModal(`
+    <button class="modal-close-btn" onclick="closeModal()">✕</button>
+    <div class="modal-title">Edit Room ${r.num}</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Monthly Rent (₹)</label><input class="form-control" id="er_rent" value="${r.rent}"/></div>
+      <div class="form-group"><label class="form-label">Status</label>
+        <select class="form-control" id="er_status">
+          <option ${r.status==='vacant'?'selected':''}>vacant</option>
+          <option ${r.status==='occupied'?'selected':''}>occupied</option>
+          <option ${r.status==='maintenance'?'selected':''}>maintenance</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Amenities</label><input class="form-control" id="er_amen" value="${r.amenities}"/></div>
+    <button class="btn btn-primary btn-full mt-16" onclick="saveEditRoom('${num}')">Save Changes</button>`);
+}
+
+function saveEditRoom(num) {
+  const rooms = getRooms();
+  const i = rooms.findIndex(r=>r.num===num);
+  if(i<0) return;
+  rooms[i].rent = parseInt(document.getElementById('er_rent').value)||rooms[i].rent;
+  rooms[i].status = document.getElementById('er_status').value;
+  rooms[i].amenities = document.getElementById('er_amen').value.trim();
+  setData('sgh_rooms',rooms); closeModal(); showToast('✅','Room updated!','success'); renderStats(); renderGrid();
+}
+
+function deleteRoom(num) {
+  if(!confirm(`Delete Room ${num}? This cannot be undone.`)) return;
+  setData('sgh_rooms', getRooms().filter(r=>r.num!==num));
+  showToast('🗑','Room deleted','info'); renderStats(); renderGrid();
+}
+</script>
+</body>
+</html>

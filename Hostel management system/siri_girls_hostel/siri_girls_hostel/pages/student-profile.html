@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>My Profile – Siri Girls Hostel</title><link rel="stylesheet" href="../css/style.css"/></head>
+<body><div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script><script src="../js/sidebar.js"></script>
+<script>
+const sess = requireAuth('student');
+if (sess) {
+  const student = getStudents().find(s=>s.id===sess.id);
+  if (!student) { clearSession(); window.location.href='../index.html'; }
+
+  document.getElementById('appRoot').innerHTML = `
+    ${buildStudentSidebar('profile')}
+    <div class="main-area">
+      <div class="topbar"><div><div class="topbar-title">My Profile</div><div class="topbar-sub">Your personal information</div></div>
+      <div class="topbar-right"><button class="btn btn-primary btn-sm" onclick="openEdit()">✏️ Edit Profile</button></div></div>
+      <div class="content">
+        <!-- Profile Header -->
+        <div class="card mb-24">
+          <div class="card-body">
+            <div style="display:flex;align-items:center;gap:22px;margin-bottom:28px;flex-wrap:wrap">
+              <div style="width:80px;height:80px;border-radius:20px;background:linear-gradient(135deg,var(--rose-light),var(--rose));display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#fff;flex-shrink:0">${student.name[0]}</div>
+              <div>
+                <h2 style="font-size:1.8rem;margin-bottom:4px">${student.name}</h2>
+                <div style="color:var(--rose);font-weight:500;margin-bottom:4px">Room ${student.room} · ${student.type} Sharing · ${student.floor} Floor</div>
+                <div style="color:var(--muted);font-size:13px">📍 Siri Girls Hostel, Hyderabad</div>
+              </div>
+              <div style="margin-left:auto"><span class="badge ${feeColor(student.feeStatus)}" style="font-size:13px;padding:6px 16px">${student.feeStatus}</span></div>
+            </div>
+            <div class="info-grid">
+              ${[['Student ID',student.id,'mono'],['College',student.college,''],['Phone',student.phone,'mono'],['Email',student.email||'—',''],['Date of Birth',fmtDate(student.dob),'mono'],['Join Date',fmtDate(student.joinDate),'mono'],['Guardian Name',student.guardianName||'—',''],['Guardian Phone',student.guardianPhone||'—','mono']].map(([l,v,c])=>`
+              <div class="info-item"><div class="info-label">${l}</div><div class="info-value ${c}">${v}</div></div>`).join('')}
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="openChangePass()">🔒 Change Password</button>
+      </div>
+    </div>`;
+
+  function openEdit(){
+    openModal(`<button class="modal-close-btn" onclick="closeModal()">✕</button>
+      <div class="modal-title">Edit Profile</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Phone</label><input class="form-control" id="ep_phone" value="${student.phone}"/></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="ep_email" value="${student.email||''}"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Guardian Name</label><input class="form-control" id="ep_gname" value="${student.guardianName||''}"/></div>
+        <div class="form-group"><label class="form-label">Guardian Phone</label><input class="form-control" id="ep_gphone" value="${student.guardianPhone||''}"/></div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="saveProfile()">Save Changes</button>`);
+  }
+
+  function saveProfile(){
+    const students = getStudents(); const i=students.findIndex(s=>s.id===sess.id);
+    if(i>-1){
+      students[i].phone  = document.getElementById('ep_phone').value.trim()||students[i].phone;
+      students[i].email  = document.getElementById('ep_email').value.trim();
+      students[i].guardianName  = document.getElementById('ep_gname').value.trim();
+      students[i].guardianPhone = document.getElementById('ep_gphone').value.trim();
+      setData('sgh_students',students);
+    }
+    closeModal(); showToast('✅','Profile updated!','success'); window.location.reload();
+  }
+
+  function openChangePass(){
+    openModal(`<button class="modal-close-btn" onclick="closeModal()">✕</button>
+      <div class="modal-title">Change Password</div>
+      <div class="form-group"><label class="form-label">Current Password</label><input class="form-control" type="password" id="cp_old"/></div>
+      <div class="form-group"><label class="form-label">New Password</label><input class="form-control" type="password" id="cp_new"/></div>
+      <div id="cp_err" class="form-error hidden mb-8"></div>
+      <button class="btn btn-primary btn-full" onclick="changePass()">Update Password</button>`);
+  }
+
+  function changePass(){
+    const oldPass = document.getElementById('cp_old').value;
+    const newPass = document.getElementById('cp_new').value;
+    if(oldPass !== student.password){ document.getElementById('cp_err').textContent='Current password is incorrect.'; document.getElementById('cp_err').classList.remove('hidden'); return; }
+    if(newPass.length<6){ document.getElementById('cp_err').textContent='New password must be at least 6 characters.'; document.getElementById('cp_err').classList.remove('hidden'); return; }
+    const students=getStudents(); const i=students.findIndex(s=>s.id===sess.id);
+    if(i>-1){ students[i].password=newPass; setData('sgh_students',students); }
+    closeModal(); showToast('✅','Password changed!','success');
+  }
+}
+</script></body></html>

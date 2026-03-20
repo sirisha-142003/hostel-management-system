@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Visitors – Siri Girls Hostel</title><link rel="stylesheet" href="../css/style.css"/></head>
+<body><div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script><script src="../js/sidebar.js"></script>
+<script>
+requireAuth('admin');
+document.getElementById('appRoot').innerHTML = buildAdminSidebar('visitors') + `
+<div class="main-area">
+  <div class="topbar"><div><div class="topbar-title">Visitor Log</div><div class="topbar-sub">Track and manage hostel visitors</div></div>
+  <div class="topbar-right"><button class="btn btn-primary" onclick="openAddVisitor()">+ Register Visitor</button></div></div>
+  <div class="content">
+    <div class="alert alert-info">ℹ️ Visitor hours: Monday – Saturday, 9:00 AM – 8:00 PM. ID proof required. Maximum 2 visitors per resident at a time.</div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Visitor Records</span><span class="badge badge-blue" id="countBadge"></span></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Visitor</th><th>Student Host</th><th>Room</th><th>Relation</th><th>Purpose</th><th>Date</th><th>In</th><th>Out</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="visitorTable"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>`;
+updateComplaintBadge(); renderVisitors();
+
+function renderVisitors(){
+  const visitors = getVisitors();
+  document.getElementById('countBadge').textContent = `${visitors.length} total`;
+  document.getElementById('visitorTable').innerHTML = visitors.map(v=>`
+    <tr>
+      <td><strong>${v.visitorName}</strong><br><span class="mono" style="font-size:11px;color:var(--muted)">${v.phone}</span></td>
+      <td>${v.studentName}</td>
+      <td class="mono">${v.room}</td>
+      <td>${v.relation}</td>
+      <td>${v.purpose}</td>
+      <td style="font-size:12px">${fmtDate(v.date)}</td>
+      <td class="mono">${v.inTime||'—'}</td>
+      <td class="mono">${v.outTime||'—'}</td>
+      <td><span class="badge ${statusColor(v.status)}">${v.status}</span></td>
+      <td>
+        ${v.status==='Inside'?`<button class="btn btn-ghost btn-sm" onclick="markExit('${v.id}')">Mark Exit</button>`:''}
+        <button class="btn btn-ghost btn-sm text-red" onclick="deleteVisitor('${v.id}')">🗑</button>
+      </td>
+    </tr>`).join('');
+}
+
+function markExit(id){
+  const visitors = getVisitors(); const i=visitors.findIndex(v=>v.id===id);
+  if(i>-1){ const now=new Date(); visitors[i].outTime=now.toTimeString().slice(0,5); visitors[i].status='Completed'; setData('sgh_visitors',visitors); showToast('✅','Exit recorded','success'); renderVisitors(); }
+}
+
+function openAddVisitor(){
+  const students = getStudents();
+  openModal(`<button class="modal-close-btn" onclick="closeModal()">✕</button>
+    <div class="modal-title">Register Visitor</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Visitor Name *</label><input class="form-control" id="vn" placeholder="Full Name"/></div>
+      <div class="form-group"><label class="form-label">Phone *</label><input class="form-control" id="vp" placeholder="Phone Number"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Host Student *</label>
+        <select class="form-control" id="vhost">
+          <option value="">Select Student</option>
+          ${students.map(s=>`<option value="${s.id}">${s.name} (${s.room})</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Relation</label>
+        <select class="form-control" id="vrel"><option>Parent</option><option>Sibling</option><option>Friend</option><option>Relative</option><option>Other</option></select></div>
+    </div>
+    <div class="form-group"><label class="form-label">Purpose</label><input class="form-control" id="vpurp" placeholder="e.g. Parent Visit"/></div>
+    <button class="btn btn-primary btn-full" onclick="saveVisitor()">Register</button>`);
+}
+
+function saveVisitor(){
+  const vn=document.getElementById('vn').value.trim(), vp=document.getElementById('vp').value.trim(), vh=document.getElementById('vhost').value;
+  if(!vn||!vp||!vh){ showToast('⚠️','Fill all required fields','error'); return; }
+  const students=getStudents(); const student=students.find(s=>s.id===vh);
+  const visitors=getVisitors(); const now=new Date();
+  visitors.push({ id:generateId('V',visitors), studentId:vh, studentName:student.name, room:student.room, visitorName:vn, phone:vp, relation:document.getElementById('vrel').value, purpose:document.getElementById('vpurp').value.trim()||'Visit', date:today(), inTime:now.toTimeString().slice(0,5), outTime:'', status:'Inside' });
+  setData('sgh_visitors',visitors); closeModal(); showToast('✅','Visitor registered!','success'); renderVisitors();
+}
+
+function deleteVisitor(id){
+  if(!confirm('Delete this visitor record?')) return;
+  setData('sgh_visitors', getVisitors().filter(v=>v.id!==id));
+  showToast('🗑','Record deleted','info'); renderVisitors();
+}
+</script></body></html>

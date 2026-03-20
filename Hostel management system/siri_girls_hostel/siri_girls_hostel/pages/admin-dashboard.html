@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard – Siri Girls Hostel</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+<div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script>
+<script src="../js/sidebar.js"></script>
+<script>
+const sess = requireAuth('admin');
+if (sess) {
+  const students    = getStudents();
+  const rooms       = getRooms();
+  const complaints  = getComplaints();
+  const notices     = getNotices();
+  const openComp    = complaints.filter(c => c.status === 'Open').length;
+  const occupied    = rooms.filter(r => r.status === 'occupied').length;
+  const vacant      = rooms.filter(r => r.status === 'vacant').length;
+  const paid        = students.filter(s => s.feeStatus === 'Paid').length;
+  const pending     = students.filter(s => s.feeStatus !== 'Paid').length;
+
+  document.getElementById('appRoot').innerHTML = `
+    ${buildAdminSidebar('dashboard')}
+    <div class="main-area">
+      <div class="topbar">
+        <div>
+          <div class="topbar-title">Dashboard</div>
+          <div class="topbar-sub">Welcome back, ${getAdmin().name}</div>
+        </div>
+        <div class="topbar-right">
+          <div class="notif-btn" title="Notifications">🔔<div class="notif-dot"></div></div>
+          <a href="admin-students.html" class="btn btn-primary btn-sm">+ Add Student</a>
+        </div>
+      </div>
+      <div class="content">
+
+        <!-- STATS -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">🎓</div>
+            <div class="stat-label">Total Students</div>
+            <div class="stat-value text-rose">${students.length}</div>
+            <div class="stat-change">Registered residents</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🏠</div>
+            <div class="stat-label">Rooms Occupied</div>
+            <div class="stat-value" style="color:var(--gold)">${occupied}</div>
+            <div class="stat-change">${vacant} rooms vacant</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-label">Fees Collected</div>
+            <div class="stat-value text-green">₹${(paid * 9650).toLocaleString('en-IN')}</div>
+            <div class="stat-change">${paid} students paid</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-label">Pending Fees</div>
+            <div class="stat-value text-red">${pending}</div>
+            <div class="stat-change">Students not yet paid</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📋</div>
+            <div class="stat-label">Open Complaints</div>
+            <div class="stat-value text-rose">${openComp}</div>
+            <div class="stat-change">Need attention</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🔧</div>
+            <div class="stat-label">Maintenance</div>
+            <div class="stat-value" style="color:var(--gold)">${getMaintenance().filter(m=>m.status!=='Completed').length}</div>
+            <div class="stat-change">Active tasks</div>
+          </div>
+        </div>
+
+        <!-- TWO COLUMN -->
+        <div class="grid-2 mb-24">
+          <!-- Occupancy chart -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">Room Occupancy</span><span class="badge badge-rose">${Math.round(occupied/rooms.length*100)}% Full</span></div>
+            <div class="card-body">
+              ${[['Occupied','occupied','rose',occupied],['Vacant','vacant','green',vacant],['Maintenance','maintenance','gold',rooms.filter(r=>r.status==='maintenance').length]].map(([lbl,,col,count])=>`
+              <div style="margin-bottom:16px">
+                <div class="flex-between mb-8"><span style="font-size:14px">${lbl}</span><span style="font-weight:600;color:var(--${col==='rose'?'rose':col==='green'?'gold':'gold'})">${count}</span></div>
+                <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${Math.round(count/rooms.length*100)}%;background:${col==='rose'?'var(--rose)':col==='green'?'#5aab82':'var(--gold)'}"></div></div>
+              </div>`).join('')}
+              <div class="flex" style="gap:10px;margin-top:18px;flex-wrap:wrap">
+                <a href="admin-rooms.html" class="btn btn-secondary btn-sm">View Rooms</a>
+                <a href="admin-allocations.html" class="btn btn-ghost btn-sm">Manage Allocations</a>
+              </div>
+            </div>
+          </div>
+          <!-- Fee Status -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">Fee Status</span><a href="admin-fees.html" class="btn btn-ghost btn-sm">View All</a></div>
+            <div class="card-body">
+              ${['Paid','Pending','Overdue'].map(status => {
+                const count = students.filter(s=>s.feeStatus===status).length;
+                return `<div style="margin-bottom:16px">
+                  <div class="flex-between mb-8"><span>${status}</span><span class="badge ${feeColor(status)}">${count}</span></div>
+                  <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${Math.round(count/students.length*100)||0}%;background:${status==='Paid'?'#5aab82':status==='Pending'?'var(--gold)':'#e05a5a'}"></div></div>
+                </div>`;
+              }).join('')}
+              <div style="margin-top:18px">
+                <a href="admin-fees.html" class="btn btn-primary btn-sm">Manage Fees</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RECENT STUDENTS TABLE -->
+        <div class="card mb-24">
+          <div class="card-header">
+            <span class="card-title">Recent Students</span>
+            <a href="admin-students.html" class="btn btn-ghost btn-sm">View All →</a>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Room</th><th>College</th><th>Joined</th><th>Fee</th><th>Actions</th></tr></thead>
+              <tbody>
+                ${students.slice(0,5).map(s=>`
+                <tr>
+                  <td><strong>${s.name}</strong><br><span style="font-size:12px;color:var(--muted)" class="mono">${s.id}</span></td>
+                  <td class="mono">${s.room}</td>
+                  <td style="font-size:13px">${s.college}</td>
+                  <td style="font-size:12px;color:var(--muted)">${fmtDate(s.joinDate)}</td>
+                  <td><span class="badge ${feeColor(s.feeStatus)}">${s.feeStatus}</span></td>
+                  <td><a href="admin-students.html" class="btn btn-ghost btn-sm">View</a></td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- RECENT COMPLAINTS + NOTICES -->
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Recent Complaints</span><a href="admin-complaints.html" class="btn btn-ghost btn-sm">View All</a></div>
+            <div class="card-body" style="padding:16px">
+              ${complaints.slice(0,3).map(c=>`
+              <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+                <div class="flex-between"><span style="font-weight:600;font-size:14px">${c.title}</span><span class="badge ${statusColor(c.status)}">${c.status}</span></div>
+                <div style="font-size:12px;color:var(--muted);margin-top:4px">${c.studentName} · Room ${c.room} · ${fmtDate(c.date)}</div>
+              </div>`).join('')}
+              <div style="padding-top:12px"><a href="admin-complaints.html" class="btn btn-primary btn-sm">Manage Complaints</a></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Notices</span><a href="admin-notices.html" class="btn btn-ghost btn-sm">View All</a></div>
+            <div class="card-body" style="padding:16px">
+              ${notices.slice(0,3).map(n=>`
+              <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+                <div class="flex-between"><span style="font-weight:600;font-size:14px">${n.title}</span><span class="badge ${priorityColor(n.priority)}">${n.priority}</span></div>
+                <div style="font-size:12px;color:var(--muted);margin-top:4px">${fmtDate(n.date)} · by ${n.author}</div>
+              </div>`).join('')}
+              <div style="padding-top:12px"><a href="admin-notices.html" class="btn btn-gold btn-sm">+ Post Notice</a></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `;
+  updateComplaintBadge();
+}
+</script>
+</body>
+</html>

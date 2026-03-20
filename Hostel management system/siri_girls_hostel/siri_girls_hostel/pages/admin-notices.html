@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Notices – Siri Girls Hostel</title><link rel="stylesheet" href="../css/style.css"/></head>
+<body><div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script><script src="../js/sidebar.js"></script>
+<script>
+requireAuth('admin');
+document.getElementById('appRoot').innerHTML = buildAdminSidebar('notices') + `
+<div class="main-area">
+  <div class="topbar"><div><div class="topbar-title">Notice Board</div><div class="topbar-sub">Post and manage notices for students</div></div>
+  <div class="topbar-right"><button class="btn btn-primary" onclick="openPostNotice()">+ Post Notice</button></div></div>
+  <div class="content"><div id="noticeList"></div></div>
+</div>`;
+updateComplaintBadge(); renderNotices();
+
+function renderNotices(){
+  const notices = getNotices();
+  document.getElementById('noticeList').innerHTML = notices.length ? notices.map(n=>`
+    <div class="complaint-card">
+      <div class="complaint-card-header">
+        <div><div class="complaint-card-title">📢 ${n.title}</div><div class="complaint-card-meta">${fmtDate(n.date)} · Posted by ${n.author}</div></div>
+        <div class="flex gap-8"><span class="badge ${priorityColor(n.priority)}">${n.priority}</span>
+          <button class="btn btn-ghost btn-sm text-red" onclick="deleteNotice('${n.id}')">🗑</button>
+        </div>
+      </div>
+      <div class="complaint-card-body">${n.body}</div>
+    </div>`).join('') : `<div class="text-center text-muted" style="padding:60px">No notices posted yet.</div>`;
+}
+
+function openPostNotice(){
+  openModal(`<button class="modal-close-btn" onclick="closeModal()">✕</button>
+    <div class="modal-title">Post a Notice</div><div class="modal-sub">This will be visible to all students</div>
+    <div class="form-group"><label class="form-label">Title *</label><input class="form-control" id="nt_title" placeholder="Notice title"/></div>
+    <div class="form-group"><label class="form-label">Priority</label>
+      <select class="form-control" id="nt_priority"><option>High</option><option>Medium</option><option>Low</option></select></div>
+    <div class="form-group"><label class="form-label">Message *</label><textarea class="form-control" id="nt_body" rows="4" placeholder="Write your notice here..."></textarea></div>
+    <button class="btn btn-primary btn-full" onclick="postNotice()">Post Notice</button>`);
+}
+
+function postNotice(){
+  const title = document.getElementById('nt_title').value.trim();
+  const body  = document.getElementById('nt_body').value.trim();
+  if(!title||!body){ showToast('⚠️','Title and message are required','error'); return; }
+  const notices = getNotices();
+  notices.unshift({ id:generateId('N',notices), title, body, priority: document.getElementById('nt_priority').value, date: today(), author: getAdmin().name });
+  setData('sgh_notices',notices); closeModal(); showToast('📢','Notice posted!','success'); renderNotices();
+}
+
+function deleteNotice(id){
+  if(!confirm('Delete this notice?')) return;
+  setData('sgh_notices', getNotices().filter(n=>n.id!==id));
+  showToast('🗑','Notice deleted','info'); renderNotices();
+}
+</script></body></html>

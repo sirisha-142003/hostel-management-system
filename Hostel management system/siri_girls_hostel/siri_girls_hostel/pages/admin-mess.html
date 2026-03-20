@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mess Menu – Siri Girls Hostel</title><link rel="stylesheet" href="../css/style.css"/>
+<style>
+.day-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; transition:var(--transition); }
+.day-card:hover { box-shadow:var(--shadow-md); }
+.day-card.today { border-color:var(--rose-light); box-shadow:0 0 0 2px rgba(196,112,122,0.18); }
+.day-header { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:linear-gradient(135deg,var(--rose-pale),var(--cream)); }
+.day-name { font-family:'Cormorant Garamond',serif; font-size:1.1rem; font-weight:700; }
+.meal-item { padding:12px 18px; border-bottom:1px solid var(--border); }
+.meal-item:last-child { border:none; }
+.meal-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px; font-family:'DM Mono',monospace; }
+.meal-val { font-size:13px; color:var(--ink2); line-height:1.5; }
+</style></head>
+<body><div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script><script src="../js/sidebar.js"></script>
+<script>
+requireAuth('admin');
+const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const todayName = dayName();
+
+document.getElementById('appRoot').innerHTML = buildAdminSidebar('mess') + `
+<div class="main-area">
+  <div class="topbar"><div><div class="topbar-title">Mess Menu</div><div class="topbar-sub">Weekly meal schedule for all residents</div></div>
+  <div class="topbar-right"><button class="btn btn-primary" onclick="openEditMess()">✏️ Edit Menu</button></div></div>
+  <div class="content">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px" id="messGrid"></div>
+  </div>
+</div>`;
+updateComplaintBadge(); renderMess();
+
+function renderMess(){
+  const menu = getMessMenu();
+  document.getElementById('messGrid').innerHTML = DAYS.map(d=>`
+    <div class="day-card ${d===todayName?'today':''}">
+      <div class="day-header">
+        <div class="day-name">${d}</div>
+        ${d===todayName?'<span class="badge badge-rose">Today</span>':''}
+      </div>
+      <div class="meal-item"><div class="meal-label">☀️ Breakfast</div><div class="meal-val">${menu[d]?.breakfast||'—'}</div></div>
+      <div class="meal-item"><div class="meal-label">🌤️ Lunch</div><div class="meal-val">${menu[d]?.lunch||'—'}</div></div>
+      <div class="meal-item"><div class="meal-label">🌙 Dinner</div><div class="meal-val">${menu[d]?.dinner||'—'}</div></div>
+    </div>`).join('');
+}
+
+function openEditMess(){
+  const menu = getMessMenu();
+  const daySelect = DAYS.map((d,i)=>`<option value="${d}" ${i===0?'selected':''}>${d}</option>`).join('');
+  openModal(`<button class="modal-close-btn" onclick="closeModal()">✕</button>
+    <div class="modal-title">Edit Mess Menu</div>
+    <div class="form-group"><label class="form-label">Day</label>
+      <select class="form-control" id="em_day" onchange="loadDayMenu()">${daySelect}</select></div>
+    <div class="form-group"><label class="form-label">☀️ Breakfast</label><textarea class="form-control" id="em_b" rows="2"></textarea></div>
+    <div class="form-group"><label class="form-label">🌤️ Lunch</label><textarea class="form-control" id="em_l" rows="2"></textarea></div>
+    <div class="form-group"><label class="form-label">🌙 Dinner</label><textarea class="form-control" id="em_d" rows="2"></textarea></div>
+    <button class="btn btn-primary btn-full" onclick="saveDayMenu()">Save Day Menu</button>`, true);
+  loadDayMenu();
+}
+
+function loadDayMenu(){
+  const day = document.getElementById('em_day')?.value;
+  const menu = getMessMenu();
+  if(day && menu[day]){
+    document.getElementById('em_b').value = menu[day].breakfast||'';
+    document.getElementById('em_l').value = menu[day].lunch||'';
+    document.getElementById('em_d').value = menu[day].dinner||'';
+  }
+}
+
+function saveDayMenu(){
+  const day=document.getElementById('em_day').value;
+  const menu=getMessMenu();
+  menu[day]={ breakfast:document.getElementById('em_b').value.trim(), lunch:document.getElementById('em_l').value.trim(), dinner:document.getElementById('em_d').value.trim() };
+  setData('sgh_mess',menu); closeModal(); showToast('✅',`${day} menu updated!`,'success'); renderMess();
+}
+</script></body></html>

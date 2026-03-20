@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Allocations – Siri Girls Hostel</title><link rel="stylesheet" href="../css/style.css"/></head>
+<body><div class="app-layout" id="appRoot"></div>
+<script src="../js/app.js"></script><script src="../js/sidebar.js"></script>
+<script>
+requireAuth('admin');
+document.getElementById('appRoot').innerHTML = buildAdminSidebar('allocations') + `
+<div class="main-area">
+  <div class="topbar"><div><div class="topbar-title">Room Allocations</div><div class="topbar-sub">Student to room mapping</div></div>
+  <div class="topbar-right"><button class="btn btn-primary" onclick="openAllocate()">+ Allocate Room</button></div></div>
+  <div class="content">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Current Allocations</span></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Student</th><th>Room</th><th>Room Type</th><th>Floor</th><th>Rent/mo</th><th>Joined</th><th>Fee Status</th><th>Actions</th></tr></thead>
+        <tbody id="allocTable"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>`;
+updateComplaintBadge(); renderAllocs();
+
+function renderAllocs(){
+  const students = getStudents();
+  const rooms    = getRooms();
+  document.getElementById('allocTable').innerHTML = students.map(s=>{
+    const room = rooms.find(r=>r.num===s.room)||{type:s.type,floor:'—',rent:0};
+    return `<tr>
+      <td><strong>${s.name}</strong><br><span class="mono" style="font-size:11px;color:var(--muted)">${s.id}</span></td>
+      <td class="mono">${s.room}</td>
+      <td>${room.type}</td>
+      <td>${room.floor}</td>
+      <td class="mono text-rose">₹${room.rent?room.rent.toLocaleString('en-IN'):'—'}</td>
+      <td style="font-size:12px;color:var(--muted)">${fmtDate(s.joinDate)}</td>
+      <td><span class="badge ${feeColor(s.feeStatus)}">${s.feeStatus}</span></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="changeRoom('${s.id}')">Change Room</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function openAllocate(){
+  const students = getStudents().filter(s=>!s.room);
+  const vacantRooms = getRooms().filter(r=>r.status==='vacant');
+  openModal(`<button class="modal-close-btn" onclick="closeModal()">✕</button>
+    <div class="modal-title">Allocate Room</div>
+    <div class="form-group"><label class="form-label">Student *</label>
+      <select class="form-control" id="al_student">
+        <option value="">Select Student</option>
+        ${getStudents().map(s=>`<option value="${s.id}">${s.name} (${s.id})</option>`).join('')}
+      </select></div>
+    <div class="form-group"><label class="form-label">Vacant Room *</label>
+      <select class="form-control" id="al_room">
+        <option value="">Select Room</option>
+        ${vacantRooms.map(r=>`<option value="${r.num}">${r.num} — ${r.type} · ₹${r.rent}/mo · ${r.floor} Floor</option>`).join('')}
+      </select></div>
+    <button class="btn btn-primary btn-full" onclick="doAllocate()">Allocate</button>`);
+}
+
+function doAllocate(){
+  const sid = document.getElementById('al_student').value;
+  const rnum = document.getElementById('al_room').value;
+  if(!sid||!rnum){ showToast('⚠️','Select both student and room','error'); return; }
+  const students=getStudents(); const rooms=getRooms();
+  const si=students.findIndex(s=>s.id===sid); const ri=rooms.findIndex(r=>r.num===rnum);
+  if(si>-1){ students[si].room=rnum; setData('sgh_students',students); }
+  if(ri>-1){ rooms[ri].status='occupied'; setData('sgh_rooms',rooms); }
+  closeModal(); showToast('✅','Room allocated successfully!','success'); renderAllocs();
+}
+
+function changeRoom(sid){
+  const vacantRooms = getRooms().filter(r=>r.status==='vacant');
+  openModal(`<button class="modal-close-btn" onclick="closeModal()">✕</button>
+    <div class="modal-title">Change Room</div>
+    <div class="form-group"><label class="form-label">New Room *</label>
+      <select class="form-control" id="cr_room">
+        <option value="">Select vacant room</option>
+        ${vacantRooms.map(r=>`<option value="${r.num}">${r.num} — ${r.type} · ₹${r.rent}/mo</option>`).join('')}
+      </select></div>
+    <button class="btn btn-primary btn-full" onclick="doChangeRoom('${sid}')">Change Room</button>`);
+}
+
+function doChangeRoom(sid){
+  const newRoom = document.getElementById('cr_room').value;
+  if(!newRoom){ showToast('⚠️','Select a room','error'); return; }
+  const students=getStudents(); const rooms=getRooms();
+  const si=students.findIndex(s=>s.id===sid);
+  const oldRoom=students[si]?.room;
+  if(si>-1){ students[si].room=newRoom; setData('sgh_students',students); }
+  const ri=rooms.findIndex(r=>r.num===newRoom);
+  if(ri>-1){ rooms[ri].status='occupied'; setData('sgh_rooms',rooms); }
+  if(oldRoom){ const oi=rooms.findIndex(r=>r.num===oldRoom); if(oi>-1){ rooms[oi].status='vacant'; setData('sgh_rooms',rooms); } }
+  closeModal(); showToast('✅','Room changed!','success'); renderAllocs();
+}
+</script></body></html>
